@@ -1,7 +1,8 @@
 [toc]
 
 # 说明
-针对已经学些的课程，整理出的相关笔记以及课程中的代码
+针对已经学习的课程，整理出的相关笔记、课程中的代码以及其他练习代码
 
-# 课程目录
-1. Algorithmic Toolbox： Coursera 中专项课程 [Data Structures and Algorithms ](https://www.coursera.org/specializations/data-structures-algorithms) 的第一个课程
+# 文件目录
+1. AlgorithmicToolbox： Coursera 中专项课程 [Data Structures and Algorithms ](https://www.coursera.org/specializations/data-structures-algorithms) 的第一个课程
+2. Exercise：在不同地方练习中总结的代码
