@@ -26,11 +26,19 @@ def alphabet_position(text: str):
     result = []
 
     for i in text:
-        if ord(i) in range(97, 122):
+        if ord(i) in range(97, 123):
             result.append(str(ord(i) - 96))
-        elif ord(i) in range(65, 90):
+        elif ord(i) in range(65, 91):
             result.append(str(ord(i) - 64))
     return " ".join(result)
 
+# the better code example
 
-# print(alphabet_position("The sunset sets at twelve o' clock."))
+
+def alphabet_position_better(text: str):
+    # firstly lowercase the text, add the order value
+    result = [str(ord(i - 96)) for i in text.lower() if i.isalpha()]
+
+    return " ".join(result)
+
+# print(alphabet_position("z"))
