@@ -76,3 +76,25 @@ def to_weird_case(string: str) -> str:
 
 
 # print(to_weird_case("cda afajk llkj"))
+
+
+"""
+ problem:
+    Build Tower by the following given argument:
+    number of floors (integer and always greater than 0).
+    Tower block is represented as *
+ blueprint:
+    use the format string syntax. The url:
+    https://docs.python.org/3.4/library/string.html
+"""
+
+
+def tower_builder(n_floors):
+    result = []
+    length = n_floors * 2 - 1
+
+    for i in range(0, n_floors):
+        result.append('{0:{fill}{align}{length}}'.format(
+            "*" * (2 * i - 1), ill=" ", align="^", length=length))
+
+    return result
