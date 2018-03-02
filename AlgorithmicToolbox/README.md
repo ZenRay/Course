@@ -47,7 +47,7 @@
 	```
 * 优化方式求解最大公因数
 
-	> GCD 优化是利用了数学公里——假设 `a` 除以 `b` 具有余数 `a'`，那么村杂 ${GCD(a, b)=GCD(a', b)}=GCD(b, a')$。具体解释见 [The Euclidean Algorithm (article) | Khan Academy](https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/the-euclidean-algorithm)。该方法的步骤数降为 `log(ab)`。
+	> GCD 优化是利用了数学公里——假设 `a` 除以 `b` 具有余数 `a'`，那么存在 ${GCD(a, b)=GCD(a', b)}=GCD(b, a')$。具体解释见 [The Euclidean Algorithm (article) | Khan Academy](https://www.khanacademy.org/computing/computer-science/cryptography/modarithmetic/a/the-euclidean-algorithm)。该方法的步骤数降为 `log(ab)`。
 	
 	```{blueprint}
 	# Euclidean 优化方式
@@ -177,3 +177,271 @@ Knapsack 算法伪代码如下：
 ![](img/knapsack_better_algorithm.png)
 
 更新后的伪代码运行时间开销  ${O}$ 为 ${n\ logn}$。
+
+#### 4.2 分治算法——Divide and Conqure
+该算法是通过对问题分解为类型相同小问题求解——要求在分解问题时，小问题之间不能有重叠，而且问题类型要相同。最后将已经解决小问题进行组合以完成问题的求解。所以该算法的基本流程如下：
+
+![](img/divide_conqure_progress.png)
+
+##### 4.2.1 线性搜索——Linear Search
+	
+线性搜索一般是在数据中一个个挨着进行搜索，并最终返回合适的结果。其搜索方式如下：
+	
+```
+# Searching in an array
+	Input: An array A with n elements. A's key k
+	Output: An index, i, where A[i] = k
+		If there is no such i, then Not_Found
+```
+	
+构造算法来看，需要设定一个基本情况( base case )，将其他问题设为一个子问题来求解，符合条件返回相应的值。该算法评估时间 ${\Theta}$ 为 ${n}$ ，实际运行情况下，最优时间是在查找到第一个值为被查询值，即时间为 ${O(1)}$；在最差时间是在被查值在最后一个位置上或者是被查值没有在数组中，即时间为 ${O(n)}$。在实际的算法伪代码如下：
+	
+```
+LinearSearch(A, low, high, key):
+	if high < low:
+		return Not_Found
+	if A[low] = key:
+		return low
+	
+	return LiearSearch(A, low + 1, high, key)
+```
+	
+##### 4.2.2 二分查找——Binary Search
+对已经排序的数据进行查找的时候，如果用线性搜索会消耗太多的时间，实际情况是可以通过其他方式进行优化。该方式进行查找最重要的条件是数组进行排序，实际解释，参考文档[Binary search (article) | Algorithms | Khan Academy](https://www.khanacademy.org/computing/computer-science/algorithms/binary-search/a/binary-search)。其搜索方式如下：
+	
+```
+# Searching in a sorted array
+Input: A sorted array A[low...high]
+	(low <= i < high: A[i] <= A[i + 1])
+	A key k.
+	
+Output: An index i, (low <= i <= high) where A[i] = k.
+	Otherwise, the greatest index i, where A[i] < k.
+	Otherwise, k <= A[low], the result is low
+```	
+	
+该算法的时间开销变少，${\Theta(log\ n)}$，伪代码如下：
+	
+```
+BinarySearch(A, low, high, key):
+	if high < low:
+		return low - 1
+	mid <- low + (high - low) / 2
+	
+	if key = A[mid]:
+		return mid
+	else if key < A[mid]:
+		return BinarySearch(A, low, mid - 1, key)
+	else:
+		return BinarySearch(A, mid + 1, high, key)
+```
+	
+以上算法是通过递归的方式进行查找，这样会导致空间开销增大，可以通过迭代的方式来进行搜索减少空间开销：
+	
+```
+BinarySearchIt(A, low, high, key):
+	while low <= high:
+		mid <- low + (high - low) / 2
+		
+		if key = A[mid]:
+			return mid
+		else if key < A[mid]:
+			high  = mid - 1
+		else:
+			low = mid + 1
+		return low - 1
+```
+
+#### 4.2.3 多项式查找——Polynomial Multiplication
+在多项式查找的实际应用例子，包括了错误检测和纠正（ Error-correcting codes ）、大整数乘法（ Large-integer Multiplication ）、母函数（即[母函数](https://zh.wikipedia.org/wiki/%E6%AF%8D%E5%87%BD%E6%95%B0)， Generating Function ）以及 Convolution in signal progressing。算法模式：
+
+![](img/multiplying_polynomial.png)
+
+算法运行时间为 ${O(n^2)}$，其伪代码如下：
+
+```
+# A 和 B 是多项式的系数作为数组
+MultPoly(A, B, n):
+	product <- Array[2n - 1]
+	
+	for i from 0 to 2n - 2:
+		product[i]  <- 0
+	
+	for i from 0 to n - 1:
+		for j from 0 to n - 1:
+			product[i + j] <- product[i + j] + A[i] * B[j]
+```
+
+对算法进行优化，通过将 A 和 B 的多项式拆分来处理，${A(x)=D_1(x)*x^{n/2}+D_0(x)}$ 以及 ${B(x)=E_1(x)*x^{n/2}+E_0(x)}$，然后计算模式演变为 ${A*B=(D_1(x)*x^{n/2}+D_0(x))*(E_1(x)*x^{n/2}+E_0(x))=(D_1E_1)*x^n+(D_1E_0+D_0E_1)*x^{n/2}+D_0E_0}$，其后计算对应的参数 ${D_1E_1}$、 ${D_1E_0+D_0E_1}$ 以及 ${D_0E_0}$。其中需要注意，设定的 x 多项式数量 n 值应该是 2 的倍数，如果非 2 的倍数可以通过假定有一个系数为 0 的高阶项。其算法优化举例如下：
+
+![](img/multiplying_polynomial_optimize.png)
+
+其算法运行预估为 ${\Theta(n^2)}$，伪代码如下：
+
+![](img/multiplying_polynomial_algorithm.png)
+
+* 算法优化——Karatsuba Approach
+
+	其思路是更改中间项 ${D_1E_0+D_0E_1}$ 为 ${(D_1+D_0)(E_1+E_0)-D_1E_1-D_0E_0}$，以减少需要计算的量。实际举例如下：
+	
+	![](img/multiplying_polynomial_karatsuba.png)
+
+##### 4.2.4 主定理——Master Theorem
+[主定理](https://zh.wikipedia.org/wiki/%E4%B8%BB%E5%AE%9A%E7%90%86)，在算法中表达了分治法中的递推关系：${If\ T(n) = aT([\frac{n}{b}])\ +\ O(n^d)}$ 其中参数要求 a > 0、b > 1、d >= 0，可以得出以下结论如下：
+
+![](img/master_theorem.png)
+
+上式中 ${O(n^d)}$ 是将问题分解后得到的多项式开销。
+
+##### 4.2.5 排序问题——Sorting Problem
+根据输入是数据，按照合适的方式进行排序输出。主要有两方面的作用：1）一般情况下，排序的数据能够提高算法的效率；2）排序数据更方便查询。
+
+1. 选择排序——Selection Sort
+
+	通过 scan 数据查找到符合条件的数据，将查找到的数据和第一个索引值进行交换；然后一次按照该方式进行查找交换以完成排序。该算法的运行时间为 ${O(n^2)}$，其伪代码如下：
+	
+	```
+	SelectionSort(A[1,...,n]):
+		for i form i to n"
+			minIndex <- i
+			
+			# A[minIndex] = min{A[i,...,n]}
+			
+			for j form i + 1 to n:
+				if A[j] < A[minIndex]:
+					minIndex <- j
+			
+			swap(A[i], A[minIndex])
+	```
+2. 插入排序——Merge Sort
+
+	先对数据进行分割，分别对分割后数据进行排序，之后将一个分割后的数据按照合适的顺序插入另一个分割的已排序数据中。该算法的运行时间评估为 ${O(nlog\ n)}$，其伪代码如下：
+	
+	```
+	# MergeSort 中存在一个调用函数 Merge
+	MergeSort(A[1,...,n]):
+		if n = 1:
+			return A
+		m <- n / 2
+		B <- MergeSort(A[1,...,m])
+		C <- MergeSort(A[m+1,...,n])
+		
+		A' <- Merge(B, C)
+		return A'
+		
+	Merge(B[1,...p], C[1,...,q]):
+		D <- empty array of size p + q
+		
+		while B and C are both non-empty:
+			b <- the first element of B
+			c <- the first element of C
+			
+			if b <= c:
+				move b from B to the end of D
+			else:
+				move c from C to the end of D
+		# 保证所有数据都被存放到 D 中，所以需要将最后数据移动到 D 中
+		move the rest of B and C to the end of D
+		
+		return D
+	```
+	
+	可视化图形举例如下：
+	![](img/merge_sort_example.png)
+	
+排序问题中衍生出两个方式：
+
+1）基于比较排序的下界( Lower Bound for Comparison Based Sorting )，即通过对数据对进行比较排序，实际应用中选择排序和插入排序都是基于比较。那么针对给予比较排序算法的下界问题就演变成了 ${\Omega}$ 值——即在最坏的条件下排序所花费的开销。下图是利用决策树方式模拟三元素的比较排序:
+	
+![](img/sort_algorithm_decision_tree.png)
+	
+从其中可以估计出决策树的深度 ${l}$ 至少为 ${n!}$；因此最大的时间开销是由于比较运算的数量决定，即至少为深度值 d。那么综合来看可以得出 ${d\geq log_2l}$。在最坏条件下，该算法的运行时间为 ${log_2(n!)=\Omega(nlog\ n)}$，该算法时间开销证明如下：
+	
+![](img/sort_algorithm_runningtime.png)
+
+
+2）基于非比较排序算法（ Non-Comparsion Based Sorting Algorithm），其方式是针对重复的数值类型进行排序。通过统计数值类型数据的数量，按照数值的大小以及统计的数量进行排序。实际举例使用数组的方式，具体如下：
+
+![](img/non_comparison_based_sorting.png)
+
+>解释：上图中是先对 1、2 和 3 等三个数值组成的数组，分别统计三个数值的数量；根据三个数值的大小和数量（ 1 有 2 个，2 有 7 个，3 有 3 个）分别进行重新排序。该算法中，没有对数值进行分别比较。
+
+该算法的运行时间为 ${O(n+M)}$，因为 ${M}$ 为数值个数可以作为常数计算，那么该算法的运行时间最后为 ${O(n)}$，其伪代码如下：
+
+```
+CountSort(A[1,...,n]):
+	Count[1,...,M] <- [0,...,0]	# 数组 A 是含有 1 到 M 的数值构成的数组，现优先对数组初始化为 0
+	
+	for i from 1 to n:
+		Count[A[i]] <- Count[A[i]] + 1	# 遍历数组中的数值，统计到 Count 数组中
+	Pos[1,...M] <- [0,...,0]
+	Pos[1] <- 1
+	
+	for j from 2 to M:
+		Pos[j] <- Pos[j-1] + Count[j-1]	# 分别计算出 1 到 M 的数值在新数组中的位置
+	
+	for i from 1 to n:
+		A'[Pos[A[i]]] <- A[i]
+		Pos[A[i]] <- Pos[A[i]] + 1
+```
+
+#### 4.2.6 快速排序——Quick Sort
+快速排序算法是基于比较方式的算法，平均运行时间为 ${O(nlog\ n)}$，最差的运行时间为 ${O(n^2)}$ 其在实际应用中效率较高。其算法方式是先对数据进行一个比较拆分（比较是基于一个选定的数值），针对拆分完成的两部分数据分别进行排序以获得完整的排序数据（实际中是使用了递归的方式）。根据实际数组距离如下：
+
+![](img/quick_sort_example.png)
+
+快速排序的伪代码以及其分析的示例如下：
+
+```
+# A 为一个数组， l 和 r 分别为数组的左端和右端
+QuickSort(A, l, r):
+	if l >= r:
+		return
+	m <- Partition(A, l, r)		# m 为选择的一个数组中的某个元素的索引值
+	
+	QuickSort(A, l, m - 1)		# 对拆分的左侧数组进行快速排序
+	QuickSort(A, m + 1, r)		# 对拆分的右侧数组进行快速排序
+	
+Partition(A, l, r):
+	x <- A[l]		# 选定的一个基准元素
+	j <- l
+	
+	for i from l + 1 to r:
+		if A[i] <= x:
+			j <- j + 1
+			swap A[j] and A[i]
+			
+	swap A[l] and A[j]		# 将选定的基准元素放置在其相应的位置上
+	
+	return j
+```
+
+示例分析图中，x 为选定的一个划分序列基准；扫描序列，将大于和小于 x 的数值放在两个序列中，同时确定了 x 的索引值为 m。另外从示例分析图中，可以看出在通过选择了一个基准（ Pivot ）之后可以，数据是分为了三部分左侧和右侧继续进行快速排序，以及中间部分为和基准一样的元素（需要注意在实际运行过程中应该还要包括第四部分，即尚未完成排序的部分）。
+
+![](img/quick_sort_description.png)
+
+## Reference
+1. [算法图解](http://www.ituring.com.cn/book/1864)
+
+	${O}$ 表示法指出了__最糟糕__情况下的运行时间；常见的 ${O}$ 运行时间包括：
+	
+	* ${O(log\ n)}$：对数时间，包括二分查找
+	* ${O(n)}$：线性时间
+	* ${O(n*log\ n)}$
+	* ${O(n^2)}$
+	* ${O(n!)}$
+
+	链表和数组：数组需要获得计算机连续的地址用以存储相应的数据；链表可以在非联系地址中存储相应的数据
+	链表优势：插入元素；劣势：难以直接读取最后一个元素，因为不知道最后一个元素的地址
+	
+	散列表( Hash  )：通过散列函数将输入映射到数组上，即通过散列函数和数组创建的一种数据结构。散列函数是一般需要满足以下要求：1）数据一致，针对相同的输入能够返回相同的结果；2）能够将不同的输入映射到不同的数字（类似于函数要求的可以多对一映射和一对一映射，而不能一对多的映射）。
+	散列的应用举例——缓存：原理是网站利用散列表的方式将数据进行存储，以便下次使用不再重新计算。
+	在实际应用的过程中需要注意，1）散列函数均匀的映射到散列表的不同位置——如果链表不能很好的分散到散列表，同样会消耗查询时间；2）同时需要注意存储在散列表中的链表长度，如果链表过长将影响查询。因此在实际中需要注意处理散列函数存储数据的散列函数和聊表长度。
+	
+2. [Sorting (article) | Selection sort ](https://www.khanacademy.org/computing/computer-science/algorithms/sorting-algorithms/a/sorting)
+
+	对选择排序（ Selection Sort ）进行了基本知识阐明以及运行评估计算说明
+	
+3. [Overview of quicksort (article) | Quick sort | Khan Academy](https://www.khanacademy.org/computing/computer-science/algorithms/quick-sort/a/overview-of-quicksort)
+
+	对快速排序（ Quick Sort ）进行了基本知识阐明。快速排序的实际主要工作是发生在拆分阶段，而归拢阶段并没有太多消耗——这点和插入排序（ Merge Sort ）相反
