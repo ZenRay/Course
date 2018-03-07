@@ -252,7 +252,7 @@ BinarySearchIt(A, low, high, key):
 		return low - 1
 ```
 
-#### 4.2.3 多项式查找——Polynomial Multiplication
+##### 4.2.3 多项式查找——Polynomial Multiplication
 在多项式查找的实际应用例子，包括了错误检测和纠正（ Error-correcting codes ）、大整数乘法（ Large-integer Multiplication ）、母函数（即[母函数](https://zh.wikipedia.org/wiki/%E6%AF%8D%E5%87%BD%E6%95%B0)， Generating Function ）以及 Convolution in signal progressing。算法模式：
 
 ![](img/multiplying_polynomial.png)
@@ -385,7 +385,7 @@ CountSort(A[1,...,n]):
 		Pos[A[i]] <- Pos[A[i]] + 1
 ```
 
-#### 4.2.6 快速排序——Quick Sort
+##### 4.2.6 快速排序——Quick Sort
 快速排序算法是基于比较方式的算法，平均运行时间为 ${O(nlog\ n)}$，最差的运行时间为 ${O(n^2)}$ 其在实际应用中效率较高。其算法方式是先对数据进行一个比较拆分（比较是基于一个选定的数值），针对拆分完成的两部分数据分别进行排序以获得完整的排序数据（实际中是使用了递归的方式）。根据实际数组距离如下：
 
 ![](img/quick_sort_example.png)
@@ -420,8 +420,53 @@ Partition(A, l, r):
 
 ![](img/quick_sort_description.png)
 
+#### 4.3 动态规划编程——Dynamic Programming
+[动态规划](https://zh.wikipedia.org/wiki/%E5%8A%A8%E6%80%81%E8%A7%84%E5%88%92)编程的核心是从左至右填充数据矩阵（和递归不同，递归在进行数据填充时是从右至左），分别获得从左至右需要的数据中能够到的最合适结果。其核心是若要解一个给定问题，需要解其不同部分（即子问题），再合并子问题的解以得出原问题的解；已经解决的子问题被存储，方便下次调用查找以节约运算开销。以下为其中一种伪代码：
+
+```
+# 该伪代码解决的问题是在有限的硬币种类（ coins ）中，解决找零（对应 money ）所用到的最少硬币数量
+
+DPChange(money, coins):		# money 为需要找零的钱数，coins 为硬币种类
+	MinNumCoins(0) <- 0		# 定义需要找零 money 的数量为 0 时，所需的硬币数量为 0
+	
+	for m from 1 to money:		# 从小到达遍历一次找零数量为 money 值时，分别生成需要的硬币数量
+		MinNumCoins(m) <- infinity
+		for i from 1 to the length of coins:
+			if m >= coins[i]:
+				NumCoins <- MinNumCoins(m - coins[i]) + 1
+				if NumCoins < MinNumCoins(m):
+					MinNumCoins(m) <- NumCoins
+	return MinNumCoins(money)
+```
+
+#### 4.4 利用动态规划解决实际问题
+在利用贪心算法解决问题的时候，可能因为找到了局部最优解而终止了继续查找。因此对这个问题，我们可以通过动态规划来优化这类问题解法。
+
+1. 利用动态规划来求解 Knapsack With Repetitions 的问题，其思路就是在转入包中的物品找到最大的值，其数学表达式如下： ${value(w)=max_{i:w_i<=w}(value(w-w_i)+v_i)}$。即放入包中的第 ${i}$ 个物品，需要在目前已知的情况下找到 ${i}$ 项最大值。如下利用伪代码来表达该算法：
+	
+	```
+	Knapsack(W):		# W 为包能承受的总重量
+		value(0) <- 0
+		for w from 1 to W:
+			value(w) <- 0
+			for i from 1 to n:		# n 为装包物品项
+				if w_i <= w:
+					val <- value(w - w_i) + v_i
+					if val > value(w):
+						value(w) <- val
+		return value(W)
+	```
+
+	对该问题分析的短视频，请查阅[视频](img/knapsack_with_repition.mov)
+
+2. 利用动态规划求解 Without Repetitions 的问题，其输入数据为 ${n}$ 项价值为 ${v}$ 且重量为 ${w}$ 的单一物品需要存放在规定的重量重，输出结果需要保证最大价值。
+
+**	动态规划存在问题——需要继续查阅一下，课程地址——[Knapsack without Repetitions - 美国加州大学圣地亚哥分校 & 高等经济学院 | Coursera](https://www.coursera.org/learn/algorithmic-toolbox/lecture/QVEY4/knapsack-without-repetitions)**
+
+⚠️**动态规划中存在限制因素，即某些条件下不适合使用动态规划来求解问题**，具体说明参考《算法图解》中第 133 页至 第 155 页。
+
 ## Reference
-1. [算法图解](http://www.ituring.com.cn/book/1864)
+1. [算法图解](http://www.ituring.com.cn/book/1864) 代码见[位置](Grokking Algorithms)
 
 	${O}$ 表示法指出了__最糟糕__情况下的运行时间；常见的 ${O}$ 运行时间包括：
 	
@@ -431,12 +476,113 @@ Partition(A, l, r):
 	* ${O(n^2)}$
 	* ${O(n!)}$
 
-	链表和数组：数组需要获得计算机连续的地址用以存储相应的数据；链表可以在非联系地址中存储相应的数据
+	**链表和数组**：数组需要获得计算机连续的地址用以存储相应的数据；链表可以在非联系地址中存储相应的数据
 	链表优势：插入元素；劣势：难以直接读取最后一个元素，因为不知道最后一个元素的地址
 	
-	散列表( Hash  )：通过散列函数将输入映射到数组上，即通过散列函数和数组创建的一种数据结构。散列函数是一般需要满足以下要求：1）数据一致，针对相同的输入能够返回相同的结果；2）能够将不同的输入映射到不同的数字（类似于函数要求的可以多对一映射和一对一映射，而不能一对多的映射）。
+	**散列表**( Hash  )：通过散列函数将输入映射到数组上，即通过散列函数和数组创建的一种数据结构。散列函数是一般需要满足以下要求：1）数据一致，针对相同的输入能够返回相同的结果；2）能够将不同的输入映射到不同的数字（类似于函数要求的可以多对一映射和一对一映射，而不能一对多的映射）。
 	散列的应用举例——缓存：原理是网站利用散列表的方式将数据进行存储，以便下次使用不再重新计算。
 	在实际应用的过程中需要注意，1）散列函数均匀的映射到散列表的不同位置——如果链表不能很好的分散到散列表，同样会消耗查询时间；2）同时需要注意存储在散列表中的链表长度，如果链表过长将影响查询。因此在实际中需要注意处理散列函数存储数据的散列函数和聊表长度。
+	**广度优先搜索**，简单来说就是搜素两样东西之间的最短距离，例如计算最少步骤可以获胜，更改错词需要多少次编辑，实际中比较明显的例子是如何使用最少的换乘数来达到目的地。在使用广度优先搜索时，一般会利用图的方式来模拟不同东西的连接方式来解决问题——图是由节点和边组成。广度优先搜索解决两类问题：1）在起点和终点之间是否存在路径；2）在起点和终点之间的路径是否存在最短路径。
+	广度优先搜索中，搜索顺序具有一定的优先顺序。举例：在朋友中查询水果销售商时，如果在朋友中没有找到销售商那么可以通过添加朋友的朋友列表以创建一个新的可搜索的列表。但是在添加过程需要注意，当前朋友非销售商时，添加该朋友的列表应该在列表之后去添加朋友列表。因为我们需要同时找到关系最近的朋友且时销售商的节点，那么一度朋友关系肯定比二度关系更近。
+	为了实现广度优先搜索的顺序检查，需要引入一个新的数据结构——**队列**（ Queue ）。队列是一种先进先出（ FIFO ）机制的数据结构，栈是另一种机制（后进先出 LIFO ）的数据结构。
+	在利用广度优先搜索解决实际问题时，一方面需要建好图，另一方面需要使用代码来实现图。使用 Python 代码实现举例：
+	
+	```{Python 2.x}
+	from collections import deque		# 导入模块
+	
+	# 该函数是一个检测函数，用于检测名字最后是否有一个 s 标识作为销售商标志
+	def person_is_seller(name):
+		return name[-1] == "s"	
+		
+	graph = {}	# 需要创建一个散列表——字典，将 you 的朋友列表构建为一个散列表
+	search_queue = deque()
+	search_queue += graph["you"]		# 将 you 的朋友列表压入队列
+	searched = []		# 用于保存已经被检测的朋友
+	
+	while search_queue:
+		pearson = search_queue.popleft()		# 弹出第一个数据
+		if person not in searched:
+			if person_is_seller(person):		# person_is_seller 是一个检查函数判断对象是否为销售商
+				print person + " is a seller!"
+				return True
+			else:
+				search_queue += graph[person]		# 如果朋友非销售商，那么添加朋友的朋友列表到队列
+				searched.append(person)
+	return False
+	```
+	
+	**加权图**算法，该算法也是一个图方式求解。实际举例如需要找到耗时最少的路径——此时不仅需要考虑最少的节点，而且需要考虑耗时最少的路径。思路：1）找出最短时间内能到达的节点；2）更新该节点的邻居的开销；3）重复以上过程，直到图中每个节点都遍历完成；4）计算出最终路径。该算法的另一个名称是**狄克斯特拉算法**，它不似广度优选算法是找到两点之间的最短路径——即段数最少路径，而是通过对每段路径进行一个加权，找到**权重**（ weight ）最小的路径。在实际应用中，需要注意狄克斯特拉算法算对有向无环图（ Directed Acyclic Graph，DAG ）计算不友好，因为每次在对环进行一次绕行都会增加一倍的权重。另外需要注意有负加权的图中，狄克斯特拉算法容易出现错误；在此种条件下，需要使用另一种算法，**贝尔曼-福德算法**（ Bellman-Ford Algorithm ）
+	
+	![](img/circle_with_direction.png)
+
+通过 Python 来实现狄克斯特拉算法算法来实现下图中的路径查找，创建三个散列表——graph、costs、parents。graph 中起点有两个邻居，因此需要存储两个值，同时在将权重和对应的值进行了映射。costs 是值从起点出发到达该节点所需的时间长度，初始终点值未知所以先设置为 ${∞}$。parents 是存储父节点的散列表。另外需要一个数组保存已经处理过的节点，以避免重复处理。
+
+![](img/dijkstras_algorithm_example.png)
+
+	```{python 2.x}
+	# the graph
+	graph = {}
+	graph["start"] = {}
+	graph["start"]["a"] = 6
+	graph["start"]["b"] = 2
+	
+	graph["a"] = {}
+	graph["a"]["fin"] = 1
+	
+	graph["b"] = {}
+	graph["b"]["a"] = 3
+	graph["b"]["fin"] = 5
+	
+	graph["fin"] = {}
+	
+	# the costs table
+	infinity = float("inf")
+	costs = {}
+	costs["a"] = 6
+	costs["b"] = 2
+	costs["fin"] = infinity
+	
+	# the parents table
+	parents = {}
+	parents["a"] = "start"
+	parents["b"] = "start"
+	parents["fin"] = None
+	
+	processed = []
+	
+	def find_lowest_cost_node(costs):
+	    lowest_cost = float("inf")
+	    lowest_cost_node = None
+	    # Go through each node.
+	    for node in costs:
+	        cost = costs[node]
+	        # If it's the lowest cost so far and hasn't been processed yet...
+	        if cost < lowest_cost and node not in processed:
+	            # ... set it as the new lowest-cost node.
+	            lowest_cost = cost
+	            lowest_cost_node = node
+	    return lowest_cost_node
+	
+	# Find the lowest-cost node that you haven't processed yet.
+	node = find_lowest_cost_node(costs)
+	# If you've processed all the nodes, this while loop is done.
+	while node is not None:
+	    cost = costs[node]
+	    # Go through all the neighbors of this node.
+	    neighbors = graph[node]
+	    for n in neighbors.keys():
+	        new_cost = cost + neighbors[n]
+	        # If it's cheaper to get to this neighbor by going through this node...
+	        if costs[n] > new_cost:
+	            # ... update the cost for this node.
+	            costs[n] = new_cost
+	            # This node becomes the new parent for this neighbor.
+	            parents[n] = node
+	    # Mark the node as processed.
+	    processed.append(node)
+	    # Find the next node to process, and loop.
+	    node = find_lowest_cost_node(costs)
+    
 	
 2. [Sorting (article) | Selection sort ](https://www.khanacademy.org/computing/computer-science/algorithms/sorting-algorithms/a/sorting)
 
@@ -445,3 +591,24 @@ Partition(A, l, r):
 3. [Overview of quicksort (article) | Quick sort | Khan Academy](https://www.khanacademy.org/computing/computer-science/algorithms/quick-sort/a/overview-of-quicksort)
 
 	对快速排序（ Quick Sort ）进行了基本知识阐明。快速排序的实际主要工作是发生在拆分阶段，而归拢阶段并没有太多消耗——这点和插入排序（ Merge Sort ）相反
+	
+4. [动态规划 求解 Minimum Edit Distance](http://blog.csdn.net/abcjennifer/article/details/7735272)
+5. [Advanced dynamic programming lecture notes](http://jeffe.cs.illinois.edu/teaching/algorithms/notes/06-sparsedynprog.pdf)
+
+	说明了将一个字符串变化为另一个字符串所需要的最小步骤——通过删除、移动、以及替换的方式获得另一个字符串。
+	
+	```
+	EditDistance(A[1,...n], B[1,...,m]):
+		D(i, 0) <- i and D(0, j) <- j for all i, j
+		for j from 1 to m:
+			for i from 1 to n:
+				insertion <- D(i, j - 1) + 1
+				deletion <- D(i - 1, j) + 1
+				match <- D(i - 1, j - 1)
+				mismatch <- D(i - 1, j - 1) + 1
+				if A[i] = B[j]:
+					D(i, j) <- min(insertion, deletion, match)
+				else:
+					D(i, j) <- min(insertion, deletion, mismatch)
+		return D(n, m)
+	```
