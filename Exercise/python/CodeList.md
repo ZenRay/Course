@@ -18,3 +18,7 @@
 返回特定高度的字符塔，该函数中使用了 format string syntax
 
 ## order\_weight
+使用是否插入判断，确定怎么插入新数据
+
+## validBraces
+判断括号是否可用，[Kata Stats: Valid Braces | Codewars](https://www.codewars.com/kata/valid-braces/python)

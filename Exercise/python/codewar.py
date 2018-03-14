@@ -153,5 +153,56 @@ def order_weight(s: str):
     return " ".join(result)
 
 
-print(order_weight("71899703 200 6 91 425 4 67407 7 96488 6 4 2 7 31064 9 7920 \
-    1 34608557 27 72 18 81"))
+# print(order_weight("71899703 200 6 91 425 4 67407 7 96488 6 4 2 7 31064 9 7920 \
+    # 1 34608557 27 72 18 81"))
+
+
+"""
+ problem:
+    Write a function that takes a string of braces, and determines if the order
+    of the braces is valid. It should return true if the string is valid, and
+    false if it's invalid.
+    All input strings will be nonempty, and will only consist of parentheses,
+    brackets and curly braces: ()[]{}.
+ example:
+    "(){}[]"   =>  True
+    "([{}])"   =>  True
+    "(}"       =>  False
+    "[(])"     =>  False
+    "[({})](]" =>  False
+ blueprint:
+    There is not excellent idea. I just check half string. It`s important to
+    rearrange the string(tring[i] + string[i+1], string[i-1] + string[i])
+
+"""
+validValue = ["{}", "[]", "()"]
+
+
+def validBraces(string):
+    mid = int(len(string) / 2)
+
+    if mid == 1:
+        return string in validValue
+
+    for i in range(mid, 0, -1):
+        if string[i - 1] + string[i] in validValue:
+            string = string[:i - 1] + string[i + 1:]
+        elif string[i] + string[i + 1] in validValue:
+            string = string[:i] + string[i + 2:]
+        else:
+            return False
+    return True
+
+
+def validBraces_better(s):
+    while '{}' in s or '()' in s or '[]' in s:
+        s = s.replace('{}', '')
+        s = s.replace('[]', '')
+        s = s.replace('()', '')
+    return s == ''
+
+
+print(validBraces('(){}[]'))
+print(validBraces("([{}])"))
+print(validBraces("[({})](]"))
+print(validBraces("{}()[]"))
