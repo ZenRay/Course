@@ -21,19 +21,23 @@
 
 2. 定制化类型转换——`apply` 方法使用
 
-该方法比较 **elegent**，因为它解决了 `astype` 对数据不整洁的转化报错的问题。其 **核心逻辑** 是利用利用函数（同样可以使用 `lambda` 匿名函数来解决问题）将数据直接解析转换为另一个数据类型。
+	该方法比较 **elegent**，因为它解决了 `astype` 对数据不整洁的转化报错的问题。其 **核心逻辑** 是利用利用函数（同样可以使用 `lambda` 匿名函数来解决问题）将数据直接解析转换为另一个数据类型。
+	
+	```{Python}
+	def convert_currency(val):
+	    """
+	    Convert the string number value to a float
+	     - Remove $
+	     - Remove commas
+	     - Convert to float type
+	    """
+	    new_val = val.replace(',','').replace('$', '')
+	    return float(new_val)
+	    
+	# 使用 apply 方法调用函数
+	df['2016'].apply(convert_currency)
+	```
 
-```{Python}
-def convert_currency(val):
-    """
-    Convert the string number value to a float
-     - Remove $
-     - Remove commas
-     - Convert to float type
-    """
-    new_val = val.replace(',','').replace('$', '')
-    return float(new_val)
-    
-# 使用 apply 方法调用函数
-df['2016'].apply(convert_currency)
-```
+3. 功能性方法使用
+
+	功能性方法是 `pandas` 自带方法，它们可以针对某些类型的数据进行转换，例如：`pd.to_datetime()`、`pd.to_numerical`。相关方法可以查询相关文档。
