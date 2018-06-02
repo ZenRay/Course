@@ -2,7 +2,7 @@
 
 [toc]
 
-## `pandas` 类型处理
+## `pandas` 类型处理${^{[1]}}$
 
 1. `astype` 类型强制转换
 
@@ -41,3 +41,21 @@
 3. 功能性方法使用
 
 	功能性方法是 `pandas` 自带方法，它们可以针对某些类型的数据进行转换，例如：`pd.to_datetime()`、`pd.to_numerical`。相关方法可以查询相关文档。
+
+4. 类型转换的高阶应用
+
+它的重要作用是，将以上的方法直接应用到数据读取中，提高了数据读取效率。**核心逻辑** 是 `pandas` 的 `read` 方法中的 `converters` 参数。使用举例如下（不对数据进行解释，主要注意转换方法）：
+
+```{python}
+df = pd.read_csv("sales_data_types.csv",
+                   dtype={'Customer Number': 'int'},
+                   converters={'2016': convert_currency,
+                               '2017': convert_currency,
+                               'Percent Growth': convert_percent,
+                               'Jan Units': lambda x: pd.to_numeric(x, errors='coerce'),
+                               'Active': lambda x: np.where(x == "Y", True, False)
+                              })
+```
+
+## 参考
+1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
