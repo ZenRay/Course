@@ -57,5 +57,13 @@
 	                              })
 	```
 
+## 去除 `matplotlib` 绘图中科学计数标记
+对于数据偏大时，绘图的坐标轴中会显示 `1e7`——即表示坐标刻度表示为 ${\times10^7}$，但是在实际绘图过程中可能并不需要显示相关计数方式。因此需要对相关对象进行调整，绘图中刻度标签是由 `formatter` 进行控制的，它有一个专门的对象[ScalarFormatter](https://matplotlib.org/api/ticker_api.html#matplotlib.ticker.ScalarFormatter)。但是可以通过其他接口完成图像的调整——即 `ax=plt.gca()` 方法获取得到的对象，之后进行其他相关的设置(需要使用其他方法， `get_major_formatter` 来得到 `formatter` 对象)：
+
+```{Python}
+ax = plt.gca()	# 得到对象接口
+ax.get_xaxis().get_major_formatter().set_scientific(False)	# 分别是得到 x 坐标轴对象，得到主坐标轴的 formatter，设置取消科学计数标记
+```
+
 ## 参考
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
