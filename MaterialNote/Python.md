@@ -91,5 +91,66 @@ twitter_archive_data_copy["timestamp"][:2]
 Name: timestamp, dtype: datetime64[ns, UTC]
 ```
 
+## `apply` 以及 `applymap` 中多参数函数使用
+在实际情况中可能会遇到多参数函数对数据处理，这个时候如果以函数传入参数的方式会报错——`TypeError`，主要是如果函数后紧跟括号表示需要完全的参数数量——这个错误的原因就是参数数量不对。
+
+```{Python}
+def text_split(text, tweet_text_option=False, rating_numerator_option=False, rating_denominator_option=False):
+    """
+    get the rate score from the text. Return the content of the tag
+    
+    Args:
+    (str) text - the tweet text
+    
+    Returns:
+    (tuple) result - the tuple contains the tweet text without the 
+    rate score, rate scores
+    """ 
+    if not text:
+        return text
+    
+    pattern = re.compile("(\d{1,2})/(\d{1,2})\s{0,1}(https://.*\w)")
+
+    match_pattern = re.search(pattern, text)
+    
+    # regex the text
+    if match_pattern:
+        rating_numerator = match_pattern.group(1)
+        rating_denominator = match_pattern.group(2)
+
+        tweet_text = re.sub(pattern, "", text).strip()
+    else:
+        rating_numerator = np.nan
+        rating_denominator = np.nan
+        tweet_text = text
+    
+    # return the result
+    if tweet_text_option:
+        return tweet_text
+
+    if rating_denominator_option:
+        return rating_denominator
+
+    if rating_numerator_option:
+        return rating_numerator
+
+# call the function and use the parameter
+twitter_archive_data_copy["text"].apply(text_split(tweet_text_option=True))[0]
+
+# raise a error
+---------------------------------------------------------------------------
+TypeError                                 Traceback (most recent call last)
+<ipython-input-184-1ded445c60aa> in <module>()
+----> 1 twitter_archive_data_copy["text"].apply(text_split(tweet_text_option=True))[0]
+
+TypeError: text_split() missing 1 required positional argument: 'text'
+```
+
+这个问题，也是完全可以解决的。解决的思路是通过将 `dataframe` 或者 `series` 的数据每个单一传给 `lambda`，以 `lambda` 的方法来调用函数即可。具体示例如下：
+
+```{python}
+twitter_archive_data_copy["text"].apply(lambda x: text_split(x, tweet_text_option=True))[0]
+```
+
 ## 参考
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
