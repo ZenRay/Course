@@ -65,5 +65,31 @@ ax = plt.gca()	# 得到对象接口
 ax.get_xaxis().get_major_formatter().set_scientific(False)	# 分别是得到 x 坐标轴对象，得到主坐标轴的 formatter，设置取消科学计数标记
 ```
 
+
+## `pandas` 中对时间类型转换
+目前遇到比较多的时间类型转换的问题，主要是集中在字符串(即 `object` 类型)需要转换为 `timestamp` 类型。最近发现了一个比较好的方式，如果字符串数据是完全保留了 `timestamp` 模式的数据，而只是数据格式问题的话，那么可以通过 `apply` 方法传入 `pandas.Timestamp` 的方式来解决转换，具体事例如下：
+
+```{Python}
+twitter_archive_data_copy["timestamp"][:3]
+
+# output 
+
+0    2017-08-01 16:23:56 +0000
+1    2017-08-01 00:17:27 +0000
+2    2017-07-31 00:18:03 +0000
+Name: timestamp, dtype: object
+
+# transform the data type
+twitter_archive_data_copy["timestamp"] = twitter_archive_data_copy["timestamp"].apply(pd.Timestamp)
+
+twitter_archive_data_copy["timestamp"][:2]
+
+# output
+
+0   2017-08-01 16:23:56+00:00
+1   2017-08-01 00:17:27+00:00
+Name: timestamp, dtype: datetime64[ns, UTC]
+```
+
 ## 参考
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
