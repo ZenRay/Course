@@ -165,6 +165,35 @@ False, False, False
 
 同样的在三者之间进行比较也将返回 `False`。这是因为由 `IEEE 754` 定义决定的，具体细节可以参考 [floating point - Why is NaN not equal to NaN?](https://stackoverflow.com/questions/10034149/why-is-nan-not-equal-to-nan?noredirect=1&lq=1) 以及 [python - Why in numpy `nan == nan` is False while nan in [nan] is True? ](https://stackoverflow.com/questions/20320022/why-in-numpy-nan-nan-is-false-while-nan-in-nan-is-true?noredirect=1&lq=1)
 
+## `DataFrame` 调整列顺序
+如果是在还没有读取数据，而且数据的列名可以被使用，那么在这种情况下可以考虑直接通过 `names` 参数来调整列名称顺序来得到相应的值。如果是以上条件没有办法满足，那么可以考虑使用 `series` 得到数据的方式调整列顺序来得到调整顺序。
+
+```
+df = pd.read_csv("twitter_archive_master.csv", header=0,
+                 names=["ID", "CreateTime", "Device",
+                         "Tweet", "RetweetTime", "TweetUrl",
+                         "RatingNumerator", "RatingDenominator",
+                         "DogName", "DogType", "ImgUrl1", "ImgNum",
+                         "Pred1", "PredConf1", "PredResult1", 
+                         "Pred2", "PredConf2", "PredResult2",
+                         "Pred3", "PredConf3", "PredResult3",
+                         "ImgUrl2", "FavoriteCount", "RetweetCount"],
+                 converters={"timestamp": pd.Timestamp,
+                              "retweeted_status_timestamp_archive": pd.Timestamp,
+                              "p1_dog": bool,
+                              "p2_dog": bool,
+                              "p3_dog": bool})
+                              
+# 下面对数据进行列顺序调整
+df = df[["ID", "CreateTime", "DogName", "DogType", 
+         "RatingNumerator", "RatingDenominator",
+        "FavoriteCount", "RetweetCount", "RetweetTime",
+         "Device", "ImgUrl1", "ImgUrl2", "ImgNum","Tweet", 
+         "TweetUrl","Pred1", "PredConf1", "PredResult1", 
+         "Pred2", "PredConf2", "PredResult2", "Pred3", 
+        "PredConf3", "PredResult3"]]                              
+```
+
 ## 参考
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
 2. [floating point - Why is NaN not equal to NaN? - Stack Overflow](https://stackoverflow.com/questions/10034149/why-is-nan-not-equal-to-nan?noredirect=1&lq=1)
