@@ -152,5 +152,21 @@ TypeError: text_split() missing 1 required positional argument: 'text'
 twitter_archive_data_copy["text"].apply(lambda x: text_split(x, tweet_text_option=True))[0]
 ```
 
+## `Python` 中不能有效地几种缺失值之间进行比较
+在 `Python` 中因为缺失值 `NaN`, `nan`, `NAN` 这三者之间以及它们本省都是不能有效的进行直接比较——将会返回 `False`:
+
+```{Python}
+import numpy as np
+np.NaN == np.NaN, np.nan == np.nan, np.NAN == np.NAN
+
+# output
+False, False, False
+```
+
+同样的在三者之间进行比较也将返回 `False`。这是因为由 `IEEE 754` 定义决定的，具体细节可以参考 [floating point - Why is NaN not equal to NaN?](https://stackoverflow.com/questions/10034149/why-is-nan-not-equal-to-nan?noredirect=1&lq=1) 以及 [python - Why in numpy `nan == nan` is False while nan in [nan] is True? ](https://stackoverflow.com/questions/20320022/why-in-numpy-nan-nan-is-false-while-nan-in-nan-is-true?noredirect=1&lq=1)
+
 ## 参考
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
+2. [floating point - Why is NaN not equal to NaN? - Stack Overflow](https://stackoverflow.com/questions/10034149/why-is-nan-not-equal-to-nan?noredirect=1&lq=1)
+3. [python - Why in numpy `nan == nan` is False while nan in [nan] is True? ](https://stackoverflow.com/questions/20320022/why-in-numpy-nan-nan-is-false-while-nan-in-nan-is-true?noredirect=1&lq=1)
+4. [floating point - What is the rationale for all comparisons returning false for IEEE754 NaN values? - Stack Overflow](https://stackoverflow.com/questions/1565164/what-is-the-rationale-for-all-comparisons-returning-false-for-ieee754-nan-values)
