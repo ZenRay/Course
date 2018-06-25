@@ -201,10 +201,17 @@ df = df[["ID", "CreateTime", "DogName", "DogType",
 
 ![](https://i.stack.imgur.com/urPEC.jpg)
 
+## `Jupyter Notebook` 绘图模式
+
+`Jupyter Notebook` 的绘图模式，可以使用魔法参数进行调整。一般情况下，是将绘图结果输出到 `Notebook` 中，使用的语句为 `%matplotlib inline`。但是该语句的 `inline` [^6]只是可选参数之一，可以选择其他的参数，相关列表如下：`auto`, `gtk`, `gtk3`, `inline`, `nbagg`, `notebook`, `osx`, `qt`, `qt4`, `qt5`, `tk`, `wx`。
+
+
 
 ## 参考
+
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
 2. [floating point - Why is NaN not equal to NaN? - Stack Overflow](https://stackoverflow.com/questions/10034149/why-is-nan-not-equal-to-nan?noredirect=1&lq=1)
 3. [python - Why in numpy `nan == nan` is False while nan in [nan] is True? ](https://stackoverflow.com/questions/20320022/why-in-numpy-nan-nan-is-false-while-nan-in-nan-is-true?noredirect=1&lq=1)
 4. [floating point - What is the rationale for all comparisons returning false for IEEE754 NaN values? - Stack Overflow](https://stackoverflow.com/questions/1565164/what-is-the-rationale-for-all-comparisons-returning-false-for-ieee754-nan-values)
 5. [python - Why is matplotlib's notched boxplot folding back on itself? - Stack Overflow](https://stackoverflow.com/questions/38794406/why-is-matplotlibs-notched-boxplot-folding-back-on-itself#)
+6. [Built-in magic commands — IPython 6.4.0 documentation](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-matplotlib)
