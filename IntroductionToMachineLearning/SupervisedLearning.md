@@ -11,11 +11,34 @@
 * $f$ (function) : 描述了 $X$ 和 $Y$ 之间的关系的函数
 * $\epsilon$ (epsilon):  **平均值为 $0$ ** 的随机误差项
   *  **不可约误差( Irreducible Error )** $^{[1]}$ ，这是因为数据集中存在的噪声，在理论的极限范围内，它也会被模型算法给体现出来。这个就像用模型来模拟抛硬币的结果，它不可能得到绝对正确的结果
-  * 还有一类误差是，因为创建的条件匹配的模型，并不能在实际复杂的数据集中得到良好的表现结果
+  *  还有一类误差是，因为创建的条件匹配的模型，并不能在实际复杂的数据集中得到良好的表现结果
+
+监督式学习算法中，包括了线性回归（**Linear Regression**）和分类（**Classification**）。
+
+* 线性回归——最小二乘回归（**Ordinary Least Squares(OLS) Resgress**）
+
+  * 利用给定的 $X$ 得到新的 $y$ 以尽可能小的误差来学习线性模型
+
+  * 原理：线性回归是假定存在 $X$ 和 $y$ 的函数形式的参数法（**Parametric Method**），$\hat{y}=\beta_0+\beta_1*x+\epsilon$。目标是通过学习模型参数 $\beta_0$ 和 $\beta_1$ 来最小化模型预计的误差
+
+  * 步骤：
+
+    1. 定义损失函数（**Cost Function** 或者 **Loss Function**）用于评估模型预计值的不准确度
+
+       损失函数 $Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{2*n}$，其中 $n$ 为数据规模，其中在分母中使用 $2*n$ 是为了方便在求导计算最小损失时，让表达式更清洁。然而随着损失函数的复杂度增加（例如 $\beta$ 参数数量增加，数据特征增加），难以通过微积分法来实现求解。因此引入了另一种迭代方法——梯度下降（**Gradient Descent**），它可以见下损失函数的复杂性。
+
+       梯度下降的目标是找到模型的损失函数的最小值，其需要通过不断的迭代来得到越来越近似的值。即每一步都沿着“坡度”下降最大的一步来做，当达到越来越平坦时即是较优解。算法收敛（**Converged**）和损失值的最小化，表示最终取得了较优解
+
+    2. 找到损失值最小的参数
 
 ### 名词解释
 
 * 特征( **Features** )：一般指数据属性。而数据可能是数值型数据（**Numerical**），也有可能是类别性数据（**Categorical**）
+* 偏导（**Partial Derivative**）[偏导](https://en.wikipedia.org/wiki/Partial_derivative) 说明了参数$\beta$ 增减变化，导致总损失值的变化
+* 过拟合（**Overfitting**）：学习的模型能够完美解释训练数据，但是不能对未遇见的数据泛化。这是因为模型过分的将训练数据特性，来解释现实情况
+* 欠拟合（**Underfitting**）：和过拟合相反，模型的复杂性不能够捕捉到数据的趋势
+* 正则化（**Regularization**）
+* 超参数（**Hyperparameter($\lambda$)**)
 
 
 
@@ -60,7 +83,7 @@
 
    奇异矩阵（**Singular Matrix**）和 方阵（**Square Matirx**）：
 
-   - 当 $\mathbb{R^{m\times{n}}}$ 中 $m=n$ 时，且所有的列是线性不相关（**Linear Independent**），那么这样的矩阵即为方阵
+   - 当 $\mathbb{R^{m\times{n}}}$ 中 $m=n$ 时，且所有的列是线性不相关（**Linear Independent**），那么这样的矩阵即为方阵（或者说为非奇异矩阵）
    - 当 $\mathbb{R^{m\times{n}}}$ 中 $m=n$ 时，但有的列是线性相关（**Linear Dependent**），那么这样的矩阵即为奇异矩阵
 
    范数（**Norms**）：包括了 $L^p​$ 范数
@@ -119,7 +142,5 @@
 
 ## 补充
 
-1. `The primary difference between this and human learning is that machine learning runs on computer hardware and is best understood through the lens of computer science and statistics, whereas human pattern-matching happens in a biological brain (while accomplishing the same goals). `
-
-   在文中看见了这句话，这里强调了 `human learning` 和 `machine learning` 的区别是“硬件”的区别，不敢苟同——人是一个“有机”系统，这个带来了更大的波动性。就目前看来尚未看见一个 “有机” `machine` 的。这点思考是基于 《反脆弱》的思路模式。
+1. 
 
