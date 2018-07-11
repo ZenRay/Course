@@ -205,6 +205,17 @@ df = df[["ID", "CreateTime", "DogName", "DogType",
 
 `Jupyter Notebook` 的绘图模式，可以使用魔法参数进行调整。一般情况下，是将绘图结果输出到 `Notebook` 中，使用的语句为 `%matplotlib inline`。但是该语句的 `inline` [^6]只是可选参数之一，可以选择其他的参数，相关列表如下：`auto`, `gtk`, `gtk3`, `inline`, `nbagg`, `notebook`, `osx`, `qt`, `qt4`, `qt5`, `tk`, `wx`。
 
+## 代码内修改标准输出的字符集——解决输出乱码的思路
+
+对于 `Python 2.X` 的版本中，对于某些非 `ASCII` 的字符需要 `unicode` 字符集，但是对于输出的结果可能是乱码。那么可以考虑更改 `sys` 中字符集，方法如下：
+
+```python
+import sys
+
+# set standard output encoding to UTF-8
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
+```
+
 
 
 ## 参考
