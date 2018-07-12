@@ -123,7 +123,129 @@ Counter({'b': 3, 'a': 2, 'c': 1, 'l': 1, 'p': 1, 'h': 1, 'e': 1, 't': 1})
 
 
 
-### 1.2 `Enum` 枚举类型
+### 1.2 `ChainMap`
+
+`ChainMap` 管理字典的序列，并且可以通过给定的键值对的特定顺序来搜索到相应的值。它具有良好的上下文（**Context**）容器，因为它可以利用对处理数据的方式。
+
+```python
+# ChianMap 也满足一般字典的方法
+import collections
+
+a = {'a': 'A', 'c': 'C'}
+b = {'b': 'B', 'c': 'D'}
+
+m = collections.ChainMap(a, b)
+
+print('Individual Values')
+print('a = {}'.format(m['a']))
+print('b = {}'.format(m['b']))
+print('c = {}'.format(m['c']))
+print()
+
+print('Keys = {}'.format(list(m.keys())))
+print('Values = {}'.format(list(m.values())))
+print()
+
+print('Items:')
+for k, v in m.items():
+    print('{} = {}'.format(k, v))
+print()
+
+print('"d" in m: {}'.format(('d' in m)))
+
+# output
+Individual Values
+a = A
+b = B
+c = C
+
+Keys = ['c', 'b', 'a']
+Values = ['C', 'B', 'A']
+
+Items:
+c = C
+b = B
+a = A
+
+"d" in m: False
+```
+
+因为在子映射的搜索方式中，是按照构造器中传入的参数顺序搜索的。所以上面的 `c` 键对应的值为 `C`。但是可以通过合适的方式进行调整，主要是因为 `ChainMap` 的属性 `maps` 可以得到映射对象的列表对象，并且是保存了搜索顺序的。因为是一个列表对象，所以可以更改顺序已经更新数据值。
+
+```python
+print(m.maps)
+print('c = {}\n'.format(m['c']))
+
+# reverse 列表，并且传回给原 maps
+m.maps = list(reversed(m.maps))
+
+print(m.maps)
+print('c = {}'.format(m['c']))
+
+# output
+[{'a': 'A', 'c': 'C'}, {'b': 'B', 'c': 'D'}]
+c = C
+
+[{'b': 'B', 'c': 'D'}, {'a': 'A', 'c': 'C'}]
+c = D
+
+# 下面是通过直接更改值的方式来更新 ChainMap 的数据
+print('Before:', m)
+# 更新值
+m['c'] = 'E'
+print('After :', m)
+print('a:', a)
+# output
+Before: ChainMap({'a': 'A', 'c': 'C'}, {'b': 'B', 'c': 'D'})
+After : ChainMap({'a': 'A', 'c': 'E'}, {'b': 'B', 'c': 'D'})
+a: {'a': 'A', 'c': 'E'}
+```
+
+此外，可以使用 `new_child` 属性方法创建一个在头部额外带有一个映射的新实例，并且是深度复制的。这个方式，还可以
+
+```python
+a = {'a': 'A', 'c': 'C'}
+b = {'b': 'B', 'c': 'D'}
+
+m1 = collections.ChainMap(a, b)
+m2 = m1.new_child()
+
+print('m1 before:', m1)
+print('m2 before:', m2)
+
+# 添加数据到头部，没有更新之前更新的 c 键值
+m2['c'] = 'E'
+
+print('m1 after:', m1)
+print('m2 after:', m2)
+
+# output
+m1 before: ChainMap({'a': 'A', 'c': 'C'}, {'b': 'B', 'c': 'D'})
+m2 before: ChainMap({}, {'a': 'A', 'c': 'C'}, {'b': 'B', 'c':'D'})
+m1 after: ChainMap({'a': 'A', 'c': 'C'}, {'b': 'B', 'c': 'D'})
+m2 after: ChainMap({'c': 'E'}, {'a': 'A', 'c': 'C'}, {'b': 'B','c': 'D'})
+    
+# 上面的方法中可以使用另外的方式，达到同样的解决方案
+a = {'a': 'A', 'c': 'C'}
+b = {'b': 'B', 'c': 'D'}
+c = {'c': 'E'}
+
+m1 = collections.ChainMap(a, b)
+# 这里的两个赋值给 m2 都是相同的
+m2 = m1.new_child(c)
+m2 = collections.ChainMap(c, *m1.maps)
+
+print('m1["c"] = {}'.format(m1['c']))
+print('m2["c"] = {}'.format(m2['c']))
+
+# output
+m1["c"] = C
+m2["c"] = E
+```
+
+## 2. `Enumeration` 数据类型
+
+### 2.1  `Enum` 枚举类型
 
 该模块定义了具有迭代和比较能力的 `Enumeration ` 类型，同时它兼具了定义值名称的值，而非使用字面上的正数和字符串。官方文档中的描述，很好解释了它的意义：
 
@@ -133,7 +255,7 @@ Counter({'b': 3, 'a': 2, 'c': 1, 'l': 1, 'p': 1, 'h': 1, 'e': 1, 't': 1})
 
 > `It is possible to simply define a sequence of values of some other basic type, such as ` `int` ` or ` `str` `, to represent discrete arbitrary values. However, an enumeration ensures that such values are distinct from any others, and that operations without meaning (“Wednesday times two”) are not defined for these values.`
 
-在创建上该数据类型上，可以使用类语法。要求每一个 `enumeration` 都必须具有唯一值和有效的识别符用于限制它的名称，此外值不能重复
+在创建上该数据类型上，可以使用类语法。要求每一个 `enumeration` 都必须具有唯一值和有效的识别符用于限制它的名称，此外值不能重复。
 
 
 
