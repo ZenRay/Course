@@ -295,6 +295,158 @@ dict_set[key].add(item)
 
 
 
+### 1.4 `Deque`
+
+双端队列，即`Double-Ended Queue`，它支持从两头添加和删除元素。它是堆和队列的复合形式，因此需要限定从哪一头更新数据。
+
+```python
+# 列表具有的方法，它也可以使用
+import collections
+
+d = collections.deque('abcdefg')
+print('Deque:', d)
+print('Length:', len(d))
+print('Left end:', d[0])
+print('Right end:', d[-1])
+
+d.remove('c')
+print('remove(c):', d)
+
+# output
+Deque: deque(['a', 'b', 'c', 'd', 'e', 'f', 'g'])
+Length: 7
+Left end: a
+Right end: g
+remove(c): deque(['a', 'b', 'd', 'e', 'f', 'g'])
+```
+
+对于填充数据的时候，需要指定 `leftside` 还是 `rightside`，但是进行右端更新的时候不需要指明。包括 `pop` `append` `extend`进行右端更新的时候不需要指明，但是在进行左端更新的时候需要用 `left` 标识指明
+
+```python
+# 添加数据
+d1 = collections.deque()
+d1.extend('abcdefg')
+print('extend    :', d1)
+d1.append('h')
+print('append    :', d1)
+
+# 使用 left 标识符来指明进行左端更新
+d2 = collections.deque()
+d2.extendleft(range(6))
+print('extendleft:', d2)
+d2.appendleft(6)
+print('appendleft:', d2)
+
+# output
+extend    : deque(['a', 'b', 'c', 'd', 'e', 'f', 'g'])
+append    : deque(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])
+extendleft: deque([5, 4, 3, 2, 1, 0])
+appendleft: deque([6, 5, 4, 3, 2, 1, 0])
+```
+
+由于双端队列时候线程安全的，所以可以在不同线程中同时从两端列用队列的内容。下面为示例：
+
+```python
+import collections
+import threading
+import time
+
+candle = collections.deque(range(5))
+
+
+def burn(direction, nextSource):
+    while True:
+        try:
+            next = nextSource()
+        except IndexError:
+            break
+        else:
+            print('{:>8}: {}'.format(direction, next))
+            time.sleep(0.1)
+    print('{:>8} done'.format(direction))
+    return
+
+
+left = threading.Thread(target=burn,
+                        args=('Left', candle.popleft))
+right = threading.Thread(target=burn,
+                         args=('Right', candle.pop))
+
+left.start()
+right.start()
+
+left.join()
+right.join()
+
+# output
+
+ Left: 0
+Right: 4
+Right: 3
+ Left: 1
+Right: 2
+ Left done
+Right done
+```
+
+在双端队列中还有一个比较有趣的功能，旋转。它的功能是从一段去除元素，直接移动到另一端——正值为向右旋转（顺时针），即从右端取出数据移动到左端；负值则是相反方向。
+
+```python
+d = collections.deque(range(10))
+print('Normal        :', d)
+
+d = collections.deque(range(10))
+d.rotate(2)
+print('Right rotation:', d)
+
+d = collections.deque(range(10))
+d.rotate(-2)
+print('Left rotation :', d)
+
+# output
+Normal        : deque([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+Right rotation: deque([8, 9, 0, 1, 2, 3, 4, 5, 6, 7])
+Left rotation : deque([2, 3, 4, 5, 6, 7, 8, 9, 0, 1])
+```
+
+注意⚠️，`Deque` 的大小可以被限制，这样当队列达到最大长度后，已经队列将沿着更新数据的方向将整个队列向该方向推——这样丢弃前方的值以添加新值。
+
+```python
+import random
+import collections
+random.seed(1)
+
+d1 = collections.deque(maxlen=3)
+d2 = collections.deque(maxlen=3)
+
+for i in range(5):
+    n = random.randint(0, 100)
+    print('n =', n)
+    d1.append(n)
+    d2.appendleft(n)
+    print('D1:', d1)
+    print('D2:', d2)
+    
+# output
+n = 17
+D1: deque([17], maxlen=3)
+D2: deque([17], maxlen=3)
+n = 72
+D1: deque([17, 72], maxlen=3)
+D2: deque([72, 17], maxlen=3)
+n = 97
+D1: deque([17, 72, 97], maxlen=3)
+D2: deque([97, 72, 17], maxlen=3)
+n = 8
+D1: deque([72, 97, 8], maxlen=3)
+D2: deque([8, 97, 72], maxlen=3)
+n = 32
+D1: deque([97, 8, 32], maxlen=3)
+D2: deque([32, 8, 97], maxlen=3)
+```
+
+
+
 ## 2. `Enumeration` 数据类型
 
 ### 2.1  `Enum` 枚举类型
