@@ -447,6 +447,85 @@ D2: deque([32, 8, 97], maxlen=3)
 
 
 
+### 1.5 `OrderedDict`
+
+它是字典的子类，可以记住更新的顺序（常规的字典不能跟踪插入顺序）。另外这类数据类型，在进行比较相等关系的时候，需要考虑元素添加的顺序。
+
+```python
+print('Regular dictionary:')
+d = {}
+d['a'] = 'A'
+d['b'] = 'B'
+d['c'] = 'C'
+
+for k, v in d.items():
+    print(k, v)
+
+print('\nOrderedDict:')
+d = collections.OrderedDict()
+d['a'] = 'A'
+d['b'] = 'B'
+d['c'] = 'C'
+
+for k, v in d.items():
+    print(k, v)
+    
+# output 这里的结果因版本存在差异，但是实际上内置的字典不会追踪添加顺序
+Regular dictionary:
+c C
+b B
+a A
+
+OrderedDict:
+a A
+b B
+c C
+```
+
+重排，具有可以将值移动到前端还是后端，这里需要通过 `move_to_end` 方法来实现，另外传入 `last` 来确定是传入前端还是后端：
+
+```python
+import collections
+
+d = collections.OrderedDict(
+    [('a', 'A'), ('b', 'B'), ('c', 'C')]
+)
+
+print('Before:')
+for k, v in d.items():
+    print(k, v)
+
+d.move_to_end('b')
+
+print('\nmove_to_end():')
+for k, v in d.items():
+    print(k, v)
+
+d.move_to_end('b', last=False)
+
+print('\nmove_to_end(last=False):')
+for k, v in d.items():
+    print(k, v)
+    
+# output
+Before:
+a A
+b B
+c C
+
+move_to_end():
+a A
+c C
+b B
+
+move_to_end(last=False):
+b B
+a A
+c C
+```
+
+
+
 ## 2. `Enumeration` 数据类型
 
 ### 2.1  `Enum` 枚举类型
