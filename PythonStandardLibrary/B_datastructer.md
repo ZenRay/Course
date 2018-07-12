@@ -243,6 +243,58 @@ m1["c"] = C
 m2["c"] = E
 ```
 
+
+
+### 1.3 `defaultdict` 
+
+在内置的字典数据类型中，可以通过 `setdefault` 方法来得到键值，但键不存在时则设置相应的值（类似的 `get` 属性是键不存在则返回设置的相应的值， `D.setdefault(k[,d]) -> D.get(k,d), also set D[k]=d if k not in D`）
+
+```python
+import collections
+
+
+def default_factory():
+    return 'default value'
+
+d = collections.defaultdict(default_factory, foo='bar')
+print('d:', d)
+print('foo =>', d['foo'])
+print('bar =>', d['bar'])
+# output
+d: defaultdict(<function default_factory at 0x1074429d8>, {'foo': 'bar'})
+foo => bar
+bar => default value
+
+# 在上面的例子中传入的默认值是一个函数，实际中常用的是传入列表、集合或者 int。因为这样可以根据键来更新数据
+s = 'mississippi'
+d = defaultdict(int)
+for k in s:
+    d[k] += 1
+
+sorted(d.items())
+# output
+[('i', 4), ('m', 1), ('p', 2), ('s', 4)]
+
+# 下面是实际应用举例，方式不同但结果相同
+# 方法一
+dict_set = {}
+
+if key not in dict_set:
+    dict_set[key] = set()
+dict_set[key].add(item)
+# 方法二
+dict_set = {}
+
+dict_set.setdefault(key, set()).add(item)
+# 方法三
+
+dict_set = defaultdict(set)
+
+dict_set[key].add(item)
+```
+
+
+
 ## 2. `Enumeration` 数据类型
 
 ### 2.1  `Enum` 枚举类型
