@@ -31,16 +31,36 @@
 
     2. 找到损失值最小的参数
 
-### 名词解释
+## 名词解释
 
 * 特征( **Features** )：一般指数据属性。而数据可能是数值型数据（**Numerical**），也有可能是类别性数据（**Categorical**）
 * 偏导（**Partial Derivative**）[偏导](https://en.wikipedia.org/wiki/Partial_derivative) 说明了参数$\beta$ 增减变化，导致总损失值的变化
 * 过拟合（**Overfitting**）：学习的模型能够完美解释训练数据，但是不能对未遇见的数据泛化。这是因为模型过分的将训练数据特性，来解释现实情况
 * 欠拟合（**Underfitting**）：和过拟合相反，模型的复杂性不能够捕捉到数据的趋势
 * 正则化（**Regularization**）
-* 超参数（**Hyperparameter($\lambda$)**)
+* 超参数（**Hyperparameter**)：模型中的通用设置，用于控制调节参数的增加和下降以提高模型表现。例如正则项中的 $\lambda$
+* 交叉验证（**Cross-validation**）在模型训练的过程中，从训练数据留出一部分作为验证模型的数据集，用训练模型来验证对留出的数据解释情况
 
 
+
+
+
+## 问题解决方案
+
+#### 1. 过拟合的解决方式
+
+一般情况下，可以通过两种方式来进行控制过拟合：
+
+* 增大训练数据集   使用的训练数据集越大，越难以过拟合
+* 使用正则化  对损失函数时使用惩罚（**penalty**），这样一方面增加了任何 `feature` 的解释效用，另一方面也可以允许更多的 `features` 被纳入训练
+
+$Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{\displaystyle{2*n}}+\lambda \displaystyle{\sum_{i=0}^1\beta_i^2}$ 公式中，第二部分即是正则项，它对大的参数项给予更多的解释效用（**Explanatory Power**）——它可以控制数据避免过拟合。
+
+
+
+正则项中的参数，主要包括两块：
+
+* $\lambda$：它是损失函数中正则项的超参数，其值越大对大的参数（参数越大，潜在越可能过拟合）惩罚越严厉
 
 
 
@@ -139,8 +159,10 @@
 
    * 迹运算（**Trace Operator**）：计算的是矩阵对角线上元素的和 $Tr(A) = \displaystyle{\sum_i A_{i,i}}$。
 
+3. [An Introduction to Gradient Descent and Linear Regression](https://spin.atomicobject.com/2014/06/24/gradient-descent-linear-regression/)
 
-## 补充
+   从示例演示以及数学解释的角度，来说明了线性回归中的梯度下降。其中演示的代码地址[GradientDescentExample](https://github.com/mattnedrich/GradientDescentExample)
 
-1. 
+4. [Understanding gradient descent - Eli Bendersky's website](https://eli.thegreenplace.net/2016/understanding-gradient-descent/)
 
+   从数学的角度，严谨地解释了梯度下降
