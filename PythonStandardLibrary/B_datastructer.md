@@ -526,6 +526,108 @@ c C
 
 
 
+### 1.6 `Array` 固定类型数据序列
+
+作用是可以高效管理**固定类型数值数据**的序列，即要求所有成员都必须是相同的基本类型。需要注意 `array` 是一个独立的 `module`。
+
+```python
+"ArrayType", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_array_reconstructor", "array", "typecodes"
+```
+
+对于 `array` 支持的数据类型，在下表中有说明：
+
+| Type Code |         Type         | Minimum size (bytes) |
+| :-------: | :------------------: | :------------------- |
+|    `b`    |        `int`         | 1                    |
+|    `B`    |        `int`         | 1                    |
+|    `h`    |   ` signed short`    | 2                    |
+|    `H`    |  ` unsigned short`   | 2                    |
+|    `i`    |    `  signed int`    | 2                    |
+|    `I`    |    `unsigned int`    | 2                    |
+|    `l`    |   `  signed long`    | 4                    |
+|    `L`    |   `unsigned long`    | 4                    |
+|    `q`    | `  signed long long` | 8                    |
+|    `Q`    | `unsigned long long` | 8                    |
+|    `f`    |       `float`        | 4                    |
+|    `D`    |    `double float`    | 8                    |
+
+初始化 `array` 初始化的方式，是需要实例化对象，其中需要两个参数——分别是指示数据类型和数据（其中数据参数可选，因为可以只实例化对象），详情如下：
+
+```python
+import array
+import binascii
+
+s = b'This is the array.'
+a = array.array('b', s)
+
+print('As byte string:', s)
+print('As array      :', a)
+print('As hex        :', binascii.hexlify(a))
+
+# output
+As byte string: b'This is the array.'
+As array      : array('b', [84, 104, 105, 115, 32, 105, 115, 32,
+ 116, 104, 101, 32, 97, 114, 114, 97, 121, 46])
+As hex        : b'54686973206973207468652061727261792e'
+```
+
+`array` 的操作上和其他序列方式类似，例如`slice`, `iteration`, `append`，实际例子如下：
+
+```python
+a = array.array('i', range(3))
+print('Initial :', a)
+
+a.extend(range(3))
+print('Extended:', a)
+
+print('Slice   :', a[2:5])
+
+print('Iterator:')
+print(list(enumerate(a)))
+
+# output
+Initial : array('i', [0, 1, 2])
+Extended: array('i', [0, 1, 2, 0, 1, 2])
+Slice   : array('i', [2, 0, 1])
+Iterator:
+[(0, 0), (1, 1), (2, 2), (3, 0), (4, 1), (5, 2)]
+```
+
+注意⚠️，`array` 的内容可以写入文件以及从文件读取。对于数据处理不仅可以直接从二进制文件读取原始数据，并将字节转换为适当的类型。在应用中可以使用 `tobytes` 方法替换 `tofile` 来格式化数据，以及使用 `frombytes` 来替换 `fromfile` 将数据转换为 `array` 实例。
+
+```python
+import array
+import binascii
+import tempfile		# 这个 module 可以跨平台的进行上下文管理，并且提供了自动清理的高级接口
+
+a = array.array('i', range(5))
+print('A1:', a)
+
+# Write the array of numbers to a temporary file
+output = tempfile.NamedTemporaryFile()
+a.tofile(output.file)  # must pass an *actual* file，这里可以使用 as_bytes = a.tobytes() 格式数据——实际就是 16 进制数据——并且无需写入文件
+output.flush()
+
+# Read the raw data
+with open(output.name, 'rb') as file:
+    raw_data = file.read()
+    print('Raw Contents:', binascii.hexlify(raw_data))	# 这里使用 hexlify 属性将数据转换为了原来的数据内容
+
+    # Read the data into an array
+    file.seek(0)
+    a2 = array.array('i')
+    a2.fromfile(file, len(a))
+    print('A2:', a2)
+    
+# output
+A1: array('i', [0, 1, 2, 3, 4])
+Raw Contents: b'0000000001000000020000000300000004000000'
+A2: array('i', [0, 1, 2, 3, 4])
+
+```
+
+候选字节排序（**Alternative Byte Ordering**），因为 `array` 存储方式存在差异（大端和小端，例如 `C` 和 `Fortran` 存储方式差异），所以在不同字节熟悉的系统或者网络上时，需要转换顺序。这里可以使用 `byteswap` 方法进行转换。
+
 ## 2. `Enumeration` 数据类型
 
 ### 2.1  `Enum` 枚举类型
@@ -715,3 +817,5 @@ Using attribute: True
 
 1. [PEP 435](https://www.python.org/dev/peps/pep-0435) 官方文档关于 `enum` 的说明
 2. [flufl.enum](http://pythonhosted.org/flufl.enum/) 对整个文档进行了解释，对于理解`enumeration` 非常有用
+3. [Command line and environment](https://docs.python.org/3.5/using/cmdline.html#) 对 `Python` 的 `CMD` 可选参数做了解释，同时解释了 `Python` 环境变量，随机种子的应用
+4. [Numerical Python](http://www.scipy.org/) 数据处理类 `module` 官方网页，包括 `Numpy`, `Pandas`,`Matplotlib`, `Scipy`, `Sympy` 等

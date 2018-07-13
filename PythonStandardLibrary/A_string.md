@@ -167,7 +167,7 @@ replacement
 
 通过调整换行符在段落中的位置来格式化文本，使用的 `package` 为 `textwrap`，其中属性如下：
 
-```
+```python
 "TextWrapper", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_leading_whitespace_re", "_whitespace", "_whitespace_only_re", "dedent", "fill", "indent", "re", "shorten", "wrap"
 ```
 
