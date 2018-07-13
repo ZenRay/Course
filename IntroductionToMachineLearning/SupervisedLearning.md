@@ -43,7 +43,7 @@
 
 * 数学原理：
 
-  这里使用的是 **Sigmoid** 函数， $S(x)=\frac{1}{1+e^{-x}}$。而在实际应用层面上，模型是一个复合函数，$。F(g(x))=\frac{1}{1+e^{-(\beta_0+\beta_1*x)}}$通过数学方式转换可以转换为一个“线性模型”， $\ln(\frac{p}{1-p})=\beta_0+\beta_1x+\epsilon$，这样就转换为了一个自然对数的 **Odds Ratio($\frac{p}{1-p}$)**。需要注意⚠️ $\beta_1$ 参数表示的是随着 $x$ 变化，**log-odds ratio** 的变化率——即是 **log-odds** 的斜率，而非概率的斜率
+  这里使用的是 **Sigmoid** 函数， $S(x)=\frac{1}{1+e^{-x}}$。而在实际应用层面上，模型是一个复合函数，$。P(Y=1|x)=F(g(x))=\frac{1}{1+e^{-(\beta_0+\beta_1*x)}}$通过数学方式转换可以转换为一个“线性模型”， $\ln(\frac{p}{1-p})=\beta_0+\beta_1x+\epsilon$，这样就转换为了一个自然对数的 **Odds Ratio($\frac{p}{1-p}$)**。需要注意⚠️ $\beta_1$ 参数表示的是随着 $x$ 变化，**log-odds ratio** 的变化率——即是 **log-odds** 的斜率，而非概率的斜率
 
   ![odd_ratio](../img/odd_ratio.png)
 
@@ -51,25 +51,45 @@
 
   阈值的设定，指示了分类问题的概率划分。**依据** 于具体任务对假正例（**False Positives**）和假负例（**False Negative**）忍耐，因为不同的时间对两者要求存在差异
 
+* 损失函数
+
+  $Cost(\beta)=\frac{\displaystyle{\sum_{i=1}^n}(y^i\log(h_{\beta}(x^i))+(1-y^i)\log(1-h_{\beta}(x^i))^2}{2*n}+\lambda\displaystyle{\sum_{j=1}^k}\beta_j^2$，该函数包括了第一部分数据损失，以及第二部分正则损失。需要注意这里的损失函数是最大似然数的方式来推导的，这个[逻辑回归损失函数解释 ](https://www.zhihu.com/question/47744216/answer/146117429)说明了它的推导方式。
+
 
 
 ## 名词解释
 
 * 特征( **Features** )：一般指数据属性。而数据可能是数值型数据（**Numerical**），也有可能是类别性数据（**Categorical**）
+
 * 偏导（**Partial Derivative**）[偏导](https://en.wikipedia.org/wiki/Partial_derivative) 说明了参数$\beta$ 增减变化，导致总损失值的变化
+
 * 过拟合（**Overfitting**）：学习的模型能够完美解释训练数据，但是不能对未遇见的数据泛化。这是因为模型过分的将训练数据特性，来解释现实情况
+
 * 欠拟合（**Underfitting**）：和过拟合相反，模型的复杂性不足以捕捉到数据的趋势
+
 * 正则化（**Regularization**）
+
 * 超参数（**Hyperparameter**)：模型中的通用设置，用于控制调节参数的增加和下降以提高模型表现。例如正则项中的 $\lambda$
+
 * 交叉验证（**Cross-validation**）在模型训练的过程中，从训练数据留出一部分作为验证模型的数据集，用训练模型来验证对留出的数据解释情况
 
+* 逻辑回归函数：
+  $$
+  \begin{cases}
+    P(y=1|x, \beta)=\frac{1}{1+e^{-\beta^Tx}} \\
+    P(x=0|x,\beta)=\frac{1}{1+e^{\beta^Tx}} =1-P(y=1|x,\beta) \\
+  \end{cases} \\
+  假设：h_\beta(x)=g(\beta^Tx)=\frac{1}{1+e^{-\beta^Tx}}
+  $$
+  
 
+  
 
 
 
 ## 问题解决方案
 
-#### 1. 过拟合的解决方式
+### 1. 过拟合的解决方式
 
 一般情况下，可以通过两种方式来进行控制过拟合：
 
