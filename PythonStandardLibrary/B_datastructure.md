@@ -885,6 +885,206 @@ New  Pos  Contents
   1    0 [1, 3, 10, 14, 26, 45, 50, 66, 77, 77, 79, 84, 85]
 ```
 
+### 1.9 `queue` 线程安全的 `FIFO` 实现
+
+作用提供了线程安全的 `FIFO`（**Fisrt-in, Fisrt-out**），可以用于多线程的 `FIFO` 数据结构——可以用于信息和数据产生与使用之间安全传递，这里是通过为调用者处理锁定。使用多个线程可以安全**处理同一个** `queue` 实例（注意⚠️这可能因为内存处理和使用，可能限制 `queue` 的大小）
+
+```python
+"Empty", "Full", "LifoQueue", "PriorityQueue", "Queue", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "deque", "heappop", "heappush", "threading", "time"
+```
+
+`queue` 的数据更新需要使用 `put` 方法将数据插入，`get` 方法可以将数据从另一端删除。下面的例子模拟了一个线程的方式，插入数据和删除数据：
+
+```python
+import queue
+
+q = queue.Queue()
+
+for i in range(5):
+    q.put(i)
+
+while not q.empty():
+    print(q.get(), end=' ')
+print()
+
+# output
+0 1 2 3 4
+
+# 需要注意⚠️ queue 不仅可以控制数据为 FIFO，同时可以 LIFO——这里需要使用 LifoQueue 类
+
+
+q = queue.LifoQueue()
+
+for i in range(5):
+    q.put(i)
+
+while not q.empty():
+    print(q.get(), end=' ')
+print()
+#output
+4 3 2 1 0
+```
+
+**优先队列（priority queue）**，这类数据结构主要是针对队列中的元素处理顺序由元素特性决定。例如财务部的打印任务优先于开发人员打印代码清单。优先队列是用队列的内容的有序顺序决定获取元素的顺序。下面的例子是使用多线程进行处理作业，这里需要根据 `get` 队列中元素优先级来处理。运行调用线程时，增加到队列中的元素的处理顺序，取决于线程的上下文切换。
+
+```python
+import functools		# functools 是一个高阶函数（可以返回其他函数的函数）模块
+import queue
+import threading
+
+
+@functools.total_ordering
+class Job:
+
+    def __init__(self, priority, description):
+        self.priority = priority
+        self.description = description
+        print('New job:', description)
+        return
+
+    def __eq__(self, other):
+        try:
+            return self.priority == other.priority
+        except AttributeError:
+            return NotImplemented
+
+    def __lt__(self, other):
+        try:
+            return self.priority < other.priority
+        except AttributeError:
+            return NotImplemented
+
+
+q = queue.PriorityQueue()
+
+q.put(Job(3, 'Mid-level job'))
+q.put(Job(10, 'Low-level job'))
+q.put(Job(1, 'Important job'))
+
+
+def process_job(q):
+    while True:
+        next_job = q.get()
+        print('Processing job:', next_job.description)
+        q.task_done()
+
+
+workers = [
+    threading.Thread(target=process_job, args=(q,)),
+    threading.Thread(target=process_job, args=(q,)),
+]
+for w in workers:
+    w.setDaemon(True)
+    w.start()
+
+q.join()
+
+# output
+New job: Mid-level job
+New job: Low-level job
+New job: Important job
+Processing job: Important job
+Processing job: Mid-level job
+Processing job: Low-level job
+```
+
+下面的示例是创建多线程播客客户程序，通过读取一个或多个 `RSS` 源，从每一个订阅中显示新的 5 集以下载。这里需要并行使用线程来处理下载数据。其中参数——首选项，数据库等需要用户输入，这直接使用硬编码
+
+```python
+from queue import Queue
+import threading
+import time
+import urllib
+from urllib.parse import urlparse
+
+import feedparser
+
+# Set up some global variables
+num_fetch_threads = 2		# 硬编码进程数
+enclosure_queue = Queue()
+
+# A real app wouldn't use hard-coded data...
+feed_urls = [
+    'http://talkpython.fm/episodes/rss',
+]	# 硬编码订阅的 URL
+
+
+def message(s):
+    print('{}: {}'.format(threading.current_thread().name, s))
+    
+# 下面的 download_enclosures 在进程中运行，并且使用 urllib 来下载数据
+def download_enclosures(q):
+    """This is the worker thread function.
+    It processes items in the queue one after
+    another.  These daemon threads go into an
+    infinite loop, and exit only when
+    the main thread ends.
+    """
+    while True:
+        message('looking for the next enclosure')
+        url = q.get()
+        filename = url.rpartition('/')[-1]
+        message('downloading {}'.format(filename))
+        response = urllib.request.urlopen(url)
+        data = response.read()
+        # Save the downloaded file to the current directory
+        message('writing to {}'.format(filename))
+        with open(filename, 'wb') as outfile:
+            outfile.write(data)
+        q.task_done()
+        
+# 定义了线程的目标函数，接下来就可以启动工作线程。在 download_enclosures 处理完 url=q.get() 的数据并返回结果之前，会阻塞并等待
+# Set up some threads to fetch the enclosures
+for i in range(num_fetch_threads):
+    worker = threading.Thread(
+        target=download_enclosures,
+        args=(enclosure_queue,),
+        name='worker-{}'.format(i),
+    )
+    worker.setDaemon(True)
+    worker.start()
+    
+# 下一步是需要使用 feedparser 模块来提取订阅内容，并将专辑 URL 加入到 queue 中。当开始加入数据，就会有工作线程提取 URL 开始下载，直至全部完成
+# Download the feed(s) and put the enclosure URLs into
+# the queue.
+for url in feed_urls:
+    response = feedparser.parse(url, agent='fetch_podcasts.py')
+    for entry in response['entries'][:5]:
+        for enclosure in entry.get('enclosures', []):
+            parsed_url = urlparse(enclosure['url'])
+            message('queuing {}'.format(
+                parsed_url.path.rpartition('/')[-1]))
+            enclosure_queue.put(enclosure['url'])
+            
+# 最后需要使用 join 将再次等待队列腾空，这样就说明处理完了所有需下载资源
+# Now wait for the queue to be empty, indicating that we have
+# processed all of the downloads.
+message('*** main thread waiting')
+enclosure_queue.join()
+message('*** done')
+
+# output，可能的结果如下
+worker-0: looking for the next enclosure
+worker-1: looking for the next enclosure
+MainThread: queuing turbogears-and-the-future-of-python-web-frameworks.mp3
+MainThread: queuing continuum-scientific-python-and-the-business-of-open-source.mp3
+MainThread: queuing openstack-cloud-computing-built-on-python.mp3
+MainThread: queuing pypy.js-pypy-python-in-your-browser.mp3
+MainThread: queuing machine-learning-with-python-and-scikit-learn.mp3
+MainThread: *** main thread waiting
+worker-0: downloading turbogears-and-the-future-of-python-web-frameworks.mp3
+worker-1: downloading continuum-scientific-python-and-the-business-of-open-source.mp3
+worker-0: looking for the next enclosure
+worker-0: downloading openstack-cloud-computing-built-on-python.mp3
+worker-1: looking for the next enclosure
+worker-1: downloading pypy.js-pypy-python-in-your-browser.mp3
+worker-0: looking for the next enclosure
+worker-0: downloading machine-learning-with-python-and-scikit-learn.mp3
+worker-1: looking for the next enclosure
+worker-0: looking for the next enclosure
+MainThread: *** done
+```
+
 
 
 ## 2. `Enumeration` 数据类型
@@ -1081,4 +1281,4 @@ Using attribute: True
 5. [Numerical Python](http://www.scipy.org/) 数据处理类 `module` 官方网页，包括 `Numpy`, `Pandas`,`Matplotlib`, `Scipy`, `Sympy` 等
 6. [理解字节序](http://www.ruanyifeng.com/blog/2016/11/byte-order.html) 解释了字节顺序，大小端的问题
 7. [纸上谈兵: 堆 (heap)](http://www.cnblogs.com/vamei/archive/2013/03/20/2966612.html)  图示的解释了堆的结构以及数据更新
-8. 
+8. [feedparser module](https://pypi.python.org/pypi/feedparser) Mark Pilgrim 的 `feedparser` 模块，用于解析 RSS 和 Atom 订阅内容
