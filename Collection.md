@@ -1,6 +1,6 @@
 **目录**
 
-[toc]
+[TOC]
 
 # 说明
 针对已经学习的课程，整理出的相关笔记、课程中的代码以及其他练习代码
@@ -25,3 +25,9 @@
 * [seaborn: statistical data visualization — seaborn 0.8.1 documentation](https://seaborn.pydata.org/)
 
 该文档基本上列出了常用的 `seaborn` 方式，可以作为参考（⚠️该 `blog` 值得关注）。但是解决问题的最好方式，还是需要查看官方文档 
+
+### 机器学习中逻辑回归的知识流程
+
+[Guide to an in-depth understanding of logistic regression](https://www.dataschool.io/guide-to-logistic-regression/) 
+
+链接中给出了很多丰富的资源，不仅包括逻辑回归的相关知识，而且还从实践以及理论文档（[paper by Andrew Ng](http://ai.stanford.edu/~ang/papers/nips01-discriminativegenerative.pdf) ——比较了逻辑回归和朴素贝叶斯性能）
