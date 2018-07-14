@@ -65,6 +65,8 @@
 
   ![](../img/SVM.png)
 
+* 优化方面 1）从原理上来说需要数据完整分割的情况下，得到最大的 `margin`；2）对于难以完整区分的数据，可以通过软化区分的定义——即允许少量数据划分错误，另外还有一种方案是将数据 **高维化**（例如将数据使用 $x^2, x^3, \cos(x)$ 转换——核心思想是 **kernel** [技巧](../img/kernel_tric.pdf)。
+
 
 
 
@@ -206,7 +208,7 @@ $Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{\displaystyle{2
 
      对非方阵的逆矩阵此前尚未定义，因为之前的定义中是通过得到矩阵的左逆来得到结果 $Ax=y , \Rightarrow x=By$——它是依赖矩阵 $A$ 的唯一映射产生 $B$ 来得到结果，当 $m\neq n$ 时是难以通过该方式来得到结果。
 
-     广义逆克服了改问题，表达式为 $A^+=\displaystyle{\lim_{\alpha\searrow 0}}(A^TA+\alpha I)^{-1}A^T$。在实际应用层面上，并非使用该表达式而是使用了 $A^+ = VD^+U^T$。
+     广义逆克服了该问题，表达式为 $A^+=\displaystyle{\lim_{\alpha\searrow 0}}(A^TA+\alpha I)^{-1}A^T$。在实际应用层面上，并非使用该表达式而是使用了 $A^+ = VD^+U^T$。
 
      * 针对列数大于行数的问题，通过广义逆提供的其中可能解来解决线性等式。特别是提供的可能解 $x=A^+y$ 的最小欧式模长 $\parallel x \parallel_2$ 的值是最可能解
      * 针对行数大于列数的问题，一般情况下是没法求解。但是可以使用广义逆的方式 $Ax$ 趋近于 $y$ 的欧式距离（$\parallel Ax-y \parallel_2$）来检验求得 $x$
@@ -220,3 +222,14 @@ $Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{\displaystyle{2
 4. [Understanding gradient descent - Eli Bendersky's website](https://eli.thegreenplace.net/2016/understanding-gradient-descent/)
 
    从数学的角度，严谨地解释了梯度下降
+
+5. [16. Learning: Support Vector Machines - YouTube](https://www.youtube.com/watch?v=_PwhiWxHK8o) 
+
+   讲解了 `SVM` 的相关信息：
+
+   * 注意，`margin` 的最大值指的是两边边界之间达到最大
+   * 使用拉格朗日乘数来解决优化问题
+
+6. [overview of the supervised learning process](https://github.com/rasbt/pattern_classification/blob/master/machine_learning/supervised_intro/introduction_to_supervised_machine_learning.md) 
+
+   机器学习中监督式学习的一般流程
