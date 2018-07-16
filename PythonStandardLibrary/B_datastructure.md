@@ -1085,6 +1085,166 @@ worker-0: looking for the next enclosure
 MainThread: *** done
 ```
 
+### 1.10 `struct` 二进制数据结构
+
+作用是在字符串和二进制数据之间转换，`struct` 包提供了字节串（`strings of bytes`）和内置的 `Python` 数据类型（例如：数字和字符串）之间的转换方法。
+
+```python
+"Struct", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_clearcache", "calcsize", "error", "iter_unpack", "pack", "pack_into", "unpack", "unpack_from"
+```
+
+`struct` 提供了处理结构值的模块级函数，以及一个`Struct` 类。格式化指示符（**format specifiers**）是一种字符串格式被编译的呈现，这种方式和正则表达式的处理过程相似。因为过程会耗费资源，所以当创建一个 `Struct` 实例并在这个是上调用方法时——而非使用模块级函数，进行一次转换更会高效。
+
+* 打包和解包（**Packing And Unpacking**）
+
+  `Struct` 提供了打包数据为字符串，以及使用由数据类型的字符以及可选的数量以及字节序（**Endianness**）组成的格式化指示符从字符串解包数据。
+
+  在下面的例子中，格式指示符包括了一个整数，一个有两个字符的字符串以及一个浮点数，其中使用空格来分割类型指示符，在编译格式的过程中空格被忽略。
+
+  ```python
+  import struct
+  import binascii
+  
+  values = (1, 'ab'.encode('utf-8'), 2.7)
+  s = struct.Struct('I 2s f')		# 创建一个“编译”格式
+  packed_data = s.pack(*values)	# 打包数据
+  
+  print('Original values:', values)
+  print('Format string  :', s.format)
+  print('Uses           :', s.size, 'bytes')
+  print('Packed Value   :', binascii.hexlify(packed_data))
+  
+  # output
+  Original values: (1, b'ab', 2.7)
+  Format string  : b'I 2s f'
+  Uses           : 12 bytes
+  Packed Value   : b'0100000061620000cdcc2c40'
+      
+  # 从打包的对象中提取数据，需要使用 unpack 方法
+  packed_data = binascii.unhexlify(b'0100000061620000cdcc2c40')	# 从十六进制数据中转换二进制
+  
+  s = struct.Struct('I 2s f')
+  unpacked_data = s.unpack(packed_data)	# 需要二进制数据
+  print('Unpacked Values:', unpacked_data)
+  ```
+
+*  字节序（**Endianness**）
+
+  默认的情况下，值的编码是使用内置 `C` 库的字节序。在格式字符串中，可以通过提供的显性字节序命令，可以很方便的覆盖默认的选项。可以使用的字节顺序命令如下：
+
+| Code |            Meaning            |
+| :--: | :---------------------------: |
+| `@`  |   内置顺序（`Native order`)   |
+| `=`  | 内置标准（`Native standard`） |
+| `<`  |    小端（`little endian`）    |
+| `>`  |     大端（`big endian`）      |
+| `!`  |  网络顺序（`Network Order`）  |
+
+
+
+```python
+import struct
+import binascii
+
+values = (1, 'ab'.encode('utf-8'), 2.7)
+print('Original values:', values)
+
+endianness = [
+    ('@', 'native, native'),
+    ('=', 'native, standard'),
+    ('<', 'little-endian'),
+    ('>', 'big-endian'),
+    ('!', 'network'),
+]
+
+for code, name in endianness:
+    s = struct.Struct(code + ' I 2s f')		# 使用不同的字节顺序来创建 struct
+    packed_data = s.pack(*values)
+    print()
+    print('Format string  :', s.format, 'for', name)
+    print('Uses           :', s.size, 'bytes')
+    print('Packed Value   :', binascii.hexlify(packed_data))
+    print('Unpacked Value :', s.unpack(packed_data))
+    
+# output
+Original values: (1, b'ab', 2.7)
+
+Format string  : b'@ I 2s f' for native, native
+Uses           : 12 bytes
+Packed Value   : b'0100000061620000cdcc2c40'
+Unpacked Value : (1, b'ab', 2.700000047683716)
+
+Format string  : b'= I 2s f' for native, standard
+Uses           : 10 bytes
+Packed Value   : b'010000006162cdcc2c40'
+Unpacked Value : (1, b'ab', 2.700000047683716)
+
+Format string  : b'< I 2s f' for little-endian
+Uses           : 10 bytes
+Packed Value   : b'010000006162cdcc2c40'
+Unpacked Value : (1, b'ab', 2.700000047683716)
+
+Format string  : b'> I 2s f' for big-endian
+Uses           : 10 bytes
+Packed Value   : b'000000016162402ccccd'
+Unpacked Value : (1, b'ab', 2.700000047683716)
+
+Format string  : b'! I 2s f' for network
+Uses           : 10 bytes
+Packed Value   : b'000000016162402ccccd'
+Unpacked Value : (1, b'ab', 2.700000047683716)
+```
+
+* 缓冲（`Buffers`）
+
+  二进制打包数据，通常用于存储对性能要求高和扩展模块间传入或传出数据的情况。通过避免为每个打包结构分配一个新的缓冲区，以此来优化之前的情况。这里需要使用 `pack_into` 和 `unpack_from` 的方法来直接写入预分配的缓冲区。
+
+  ```python
+  import array
+  import binascii
+  import ctypes	# 是 Python 的一个外部库，提供和 C 语言兼容的数据类型，可以很方便地调用 DLL 中的函数或者共享库。可以使用纯 Python 代码调用这些函数， 而不用编写额外的 C 代码或使用第三方扩展工具。
+  import struct
+  
+  s = struct.Struct('I 2s f')
+  values = (1, 'ab'.encode('utf-8'), 2.7)
+  print('Original:', values)
+  
+  print()
+  print('ctypes string buffer')
+  
+  b = ctypes.create_string_buffer(s.size)
+  print('Before  :', binascii.hexlify(b.raw))
+  s.pack_into(b, 0, *values)
+  print('After   :', binascii.hexlify(b.raw))
+  print('Unpacked:', s.unpack_from(b, 0))
+  
+  print()
+  print('array')
+  
+  a = array.array('b', b'\0' * s.size)	# size 属性指出缓冲区需要多大
+  print('Before  :', binascii.hexlify(a))
+  s.pack_into(a, 0, *values)
+  print('After   :', binascii.hexlify(a))
+  print('Unpacked:', s.unpack_from(a, 0))
+  
+  # output
+  Original: (1, b'ab', 2.7)
+  
+  ctypes string buffer
+  Before  : b'000000000000000000000000'
+  After   : b'0100000061620000cdcc2c40'
+  Unpacked: (1, b'ab', 2.700000047683716)
+  
+  array
+  Before  : b'000000000000000000000000'
+  After   : b'0100000061620000cdcc2c40'
+  Unpacked: (1, b'ab', 2.700000047683716)
+  ```
+
+  
+
+
+
 
 
 ## 2. `Enumeration` 数据类型
@@ -1282,3 +1442,4 @@ Using attribute: True
 6. [理解字节序](http://www.ruanyifeng.com/blog/2016/11/byte-order.html) 解释了字节顺序，大小端的问题
 7. [纸上谈兵: 堆 (heap)](http://www.cnblogs.com/vamei/archive/2013/03/20/2966612.html)  图示的解释了堆的结构以及数据更新
 8. [feedparser module](https://pypi.python.org/pypi/feedparser) Mark Pilgrim 的 `feedparser` 模块，用于解析 RSS 和 Atom 订阅内容
+9. [第十五章：C语言扩展 — python3-cookbook](http://python3-cookbook-personal.readthedocs.io/zh_CN/latest/chapters/p15_c_extensions.html)  `ctype` 模块说明
