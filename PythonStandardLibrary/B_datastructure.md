@@ -1241,7 +1241,358 @@ Unpacked Value : (1, b'ab', 2.700000047683716)
   Unpacked: (1, b'ab', 2.700000047683716)
   ```
 
+### 1.11 `weakref` 对象的永久引用
+
+作用是引用一个“昂贵”对象，如果不在有其他弱引用，那么允许垃圾回收器回收器内存。因为正常引用会增加对象的引用次数，避免他被垃圾回收。但是并不希望总是如此，例如在一个循环引用，或者有时可能要创建一个对象缓存，在需要内存时可是释放缓存。同时弱引用，是避免对象被自动清除的一个对象句柄。
+
+```python
+"CallableProxyType", "KeyedRef", "ProxyType", "ProxyTypes", "ReferenceType", "WeakKeyDictionary", "WeakMethod", "WeakSet", "WeakValueDictionary", "_IterationGuard", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_remove_dead_weakref", "collections", "finalize", "getweakrefcount", "getweakrefs", "itertools", "proxy", "ref", "sys"
+```
+
+* 引用
+
+对象的弱引用时通过 `ref` 类来进行管理，为了获取原对象，可以调用引用对象。
+
+```python
+import weakref
+
+class ExpensiveObject:
+
+    def __del__(self):
+        print('(Deleting {})'.format(self))
+
+obj = ExpensiveObject()
+r = weakref.ref(obj)	# 使用 ref 类来示例化一个弱引用
+
+print('obj:', obj)
+print('ref:', r)
+print('r():', r())
+
+print('deleting obj')
+del obj		# 删除原对象 obj
+print('r():', r())	# 通过弱引用调用来引用原对象
+
+# output
+obj: <__main__.ExpensiveObject object at 0x1148babe0>
+ref: <weakref at 0x1147df228; to 'ExpensiveObject' at 0x1148babe0>
+r(): <__main__.ExpensiveObject object at 0x1148babe0>
+deleting obj
+(Deleting <__main__.ExpensiveObject object at 0x1148babe0>)
+r(): None
+```
+
+* 引用回调（**Reference Callbacks**）
+
+  `ref` 构造器可以接受一个可选的回调函数，**删除所引用的原对象时会调用这个函数**（注意⚠️时删除时调用）
+
+  ```python
+  import weakref
   
+  class ExpensiveObject:
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+  def callback(reference):
+      """Invoked when referenced object is deleted"""
+      print('callback({!r})'.format(reference))
+  
+  obj = ExpensiveObject()
+  r = weakref.ref(obj, callback)
+  
+  print('obj:', obj)
+  print('ref:', r)
+  print('r():', r())
+  
+  print('deleting obj')
+  del obj
+  print('r():', r())
+  
+  # 在引用 “死亡”且不再引用原对象时，回调函数接受引用对象作为一个参数。使用这个方式是从缓存（Cache）中删除弱引用——更重要的作用应该是指示引用的对象被删除了
+  # outut
+  obj: <__main__.ExpensiveObject object at 0x1010b1978>
+  ref: <weakref at 0x1010a92c8; to 'ExpensiveObject' at
+  0x1010b1978>
+  r(): <__main__.ExpensiveObject object at 0x1010b1978>
+  deleting obj
+  (Deleting <__main__.ExpensiveObject object at 0x1010b1978>)
+  callback(<weakref at 0x1010a92c8; dead>)
+  r(): None
+  ```
+
+* 最终确定对象（**Finalizing Object**）
+
+  当对引用进行了清楚了之后，为了能更稳健地管理资源，可以使用 `finalize` 关联对象的回调。`finalize` 实例保留到绑定的对象被删除，即是应用没有保留引用到 `finalize`
+
+  ```python
+  import weakref
+  
+  class ExpensiveObject:
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+  def on_finalize(*args):
+      print('on_finalize({!r})'.format(args))
+  
+  obj = ExpensiveObject()
+  weakref.finalize(obj, on_finalize, 'extra argument')		# 直接使用 finalize 进行实例，表面上是可以传入额外参数给回调函数。这个就是表面上的 ref 差异
+  
+  del obj
+  
+  # finalize 的参数是对象的踪迹（track），调用执行参数是传入给调用对象例如当对象被垃圾回收，任何位置和命名参数
+  # output
+  (Deleting <__main__.ExpensiveObject object at 0x1148be9e8>)
+  on_finalize(('extra argument',))
+  ```
+
+  `finalize` 实例具有可写入的 `atexit` 属性，它能够控制当程序退出之后回调函数是否被调用。
+
+  ```python
+  # weakref_finalize_atexit.py
+  import sys
+  import weakref
+  
+  class ExpensiveObject:
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+  def on_finalize(*args):
+      print('on_finalize({!r})'.format(args))
+  
+  obj = ExpensiveObject()
+  f = weakref.finalize(obj, on_finalize, 'extra argument')
+  f.atexit = bool(int(sys.argv[1]))	# 需要传入一个 布尔值，默认的情况下 True
+  
+  # ⚠️这需要是执行文件，按照脚本文件方式执行，而且需要传入参数，1 为 True， 0 为 False
+  $ python3 weakref_finalize_atexit.py 1
+  
+  on_finalize(('extra argument',))
+  (Deleting <__main__.ExpensiveObject object at 0x1007b10f0>)
+  
+  $ python3 weakref_finalize_atexit.py 0
+  ```
+
+  下面的示例，是为了说明即使删除了原对象，`finalize` 还是可以追踪对象，引用被保留了——也就是说对象没有被垃圾回收
+
+  ```python
+  # weakref_finalize_reference.py
+  import gc	# 垃圾回收器接口， Garbage Collector interface
+  import weakref
+  
+  
+  class ExpensiveObject:
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+  
+  def on_finalize(*args):
+      print('on_finalize({!r})'.format(args))
+  
+  
+  obj = ExpensiveObject()
+  obj_id = id(obj)
+  
+  f = weakref.finalize(obj, on_finalize, obj)
+  f.atexit = False
+  
+  del obj
+  
+  for o in gc.get_objects():
+      if id(o) == obj_id:
+          print('found uncollected object in gc')
+          
+  # 按照脚本方式执行
+  $ python3 weakref_finalize_reference.py
+  
+  found uncollected object in gc
+  ```
+
+  使用被追踪的对象的绑定方法作为可调用的方式，可以阻止对象被最终确定——这里原句子是 `Using a bound method of a tracked object as the callable can also prevent an object from being finalized properly. `
+
+  ```python
+  # weakref_finalize_reference_method.py
+  import gc
+  import weakref
+  
+  
+  class ExpensiveObject:
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+      def do_finalize(self):
+          print('do_finalize')
+  
+  
+  obj = ExpensiveObject()
+  obj_id = id(obj)
+  
+  f = weakref.finalize(obj, obj.do_finalize)
+  f.atexit = False
+  
+  del obj
+  
+  for o in gc.get_objects():
+      if id(o) == obj_id:
+          print('found uncollected object in gc')
+  
+  # 因为可调用的对象，是将实例 obj 的绑定方法传给了 finalize，这样 finalize 得到了 obj 引用，这样导致不能删除和垃圾回收
+  # output
+  $ python3 weakref_finalize_reference_method.py
+  
+  found uncollected object in gc
+  ```
+
+* 代理（**Proxy**）
+
+  使用代理的方式，可能比引用更方便。使用代理可以像使用原对象一样，而且不要求访问对象之前先调用代理。另外代理可以将数据传入到另一个库，而这个库并不需要确认它接受的是引用而非是一个真正的对象
+
+  ```python
+  # weakref_proxy.py
+  import weakref
+  
+  
+  class ExpensiveObject:
+  
+      def __init__(self, name):
+          self.name = name
+  
+      def __del__(self):
+          print('(Deleting {})'.format(self))
+  
+  
+  obj = ExpensiveObject('My Object')
+  r = weakref.ref(obj)
+  p = weakref.proxy(obj)
+  
+  print('via obj:', obj.name)
+  print('via ref:', r().name)
+  print('via proxy:', p.name)		# 这里使用代理和引用的差异是因为引用需要将变量当作函数被调用，而代理不需要，和原对象的使用方式是一样的
+  del obj
+  print('via proxy:', p.name)
+  
+  # 注意⚠️ 如果引用的对象删除后在访问代理，会产生一个 ReferenceError 异常
+  # output 需要以脚本方式运行
+  $ python3 weakref_proxy.py
+  
+  via obj: My Object
+  via ref: My Object
+  via proxy: My Object
+  (Deleting <__main__.ExpensiveObject object at 0x1007aa7b8>)
+  Traceback (most recent call last):
+    File "weakref_proxy.py", line 30, in <module>
+      print('via proxy:', p.name)
+  ReferenceError: weakly-referenced object no longer exists
+  ```
+
+* 缓存对象（**Caching Objects**）
+
+  `ref` 和 `proxy` 被当作是一个底层实现，尽管他们对于维护单个对象的弱引用很有用，并允许将循环垃圾回收。但 `WeakKeyDictionary` 和 `WeakValueDictionary` 两个类提供了更合适的 `API` 来创建多个对象的缓存。
+  `WeakValueDictionary` 使用其中保存的值的弱引用，当其他代码不再实际使用这些值时允许其垃圾回收。通过垃圾回收器的显式调用，由此说明了常规字典和 `WeakValueDictionary` 完成内存处理的差别。`WeakKeyDictionary` 与前者相似，只是对字典中的键进行弱引用而非值
+  
+  ```{python}
+  # weakref_valuedict.py
+	import gc
+	from pprint import pprint
+	import weakref
+	
+	gc.set_debug(gc.DEBUG_UNCOLLECTABLE)
+	
+	
+	class ExpensiveObject:
+	
+	    def __init__(self, name):
+	        self.name = name
+	
+	    def __repr__(self):
+	        return 'ExpensiveObject({})'.format(self.name)
+	
+	    def __del__(self):
+	        print('    (Deleting {})'.format(self))
+	
+	
+	def demo(cache_factory):
+	    # hold objects so any weak references
+	    # are not removed immediately
+	    all_refs = {}
+	    # create the cache using the factory
+	    print('CACHE TYPE:', cache_factory)
+	    cache = cache_factory()
+	    for name in ['one', 'two', 'three']:
+	        o = ExpensiveObject(name)
+	        cache[name] = o
+	        all_refs[name] = o
+	        del o  # decref
+	
+	    print('  all_refs =', end=' ')
+	    pprint(all_refs)
+	    print('\n  Before, cache contains:', list(cache.keys()))
+	    for name, value in cache.items():
+	        print('    {} = {}'.format(name, value))
+	        del value  # decref
+	
+	    # remove all references to the objects except the cache
+	    print('\n  Cleanup:')
+	    del all_refs
+	    gc.collect()
+	
+	    print('\n  After, cache contains:', list(cache.keys()))
+	    for name, value in cache.items():
+	        print('    {} = {}'.format(name, value))
+	    print('  demo returning')
+	    returns
+	
+	
+	demo(dict)
+	print()
+	
+	demo(weakref.WeakValueDictionary)
+	# 如果循环变量指示缓存的值，这些循环变量必须显式清除，从而使对象的引用计数减少，否则垃圾回收器不会删除这些对象，它们仍会保留在缓存中。因此这里类似的使用 all_refs 变量来维护引用，避免过早被垃圾回收
+	# output
+	$ python3 weakref_valuedict.py
+	
+	CACHE TYPE: <class 'dict'>
+	  all_refs = {'one': ExpensiveObject(one),
+	 'three': ExpensiveObject(three),
+	 'two': ExpensiveObject(two)}
+	
+	  Before, cache contains: ['one', 'three', 'two']
+	    one = ExpensiveObject(one)
+	    three = ExpensiveObject(three)
+	    two = ExpensiveObject(two)
+	
+	  Cleanup:
+	
+	  After, cache contains: ['one', 'three', 'two']
+	    one = ExpensiveObject(one)
+	    three = ExpensiveObject(three)
+	    two = ExpensiveObject(two)
+	  demo returning
+	    (Deleting ExpensiveObject(one))
+	    (Deleting ExpensiveObject(three))
+	    (Deleting ExpensiveObject(two))
+	
+	CACHE TYPE: <class 'weakref.WeakValueDictionary'>
+	  all_refs = {'one': ExpensiveObject(one),
+	 'three': ExpensiveObject(three),
+	 'two': ExpensiveObject(two)}
+	
+	  Before, cache contains: ['one', 'three', 'two']
+	    one = ExpensiveObject(one)
+	    three = ExpensiveObject(three)
+	    two = ExpensiveObject(two)
+	
+	  Cleanup:
+	    (Deleting ExpensiveObject(one))
+	    (Deleting ExpensiveObject(three))
+	    (Deleting ExpensiveObject(two))
+	
+	  After, cache contains: []
+	  demo returning
+  ```
 
 
 
@@ -1443,3 +1794,10 @@ Using attribute: True
 7. [纸上谈兵: 堆 (heap)](http://www.cnblogs.com/vamei/archive/2013/03/20/2966612.html)  图示的解释了堆的结构以及数据更新
 8. [feedparser module](https://pypi.python.org/pypi/feedparser) Mark Pilgrim 的 `feedparser` 模块，用于解析 RSS 和 Atom 订阅内容
 9. [第十五章：C语言扩展 — python3-cookbook](http://python3-cookbook-personal.readthedocs.io/zh_CN/latest/chapters/p15_c_extensions.html)  `ctype` 模块说明
+10. [PEP 205 -- Weak References | Python.org](https://www.python.org/dev/peps/pep-0205/) 弱引用的详细说明
+
+
+
+## 存疑
+
+1. 弱引用中 `finalize` 的一个作用是阻止对象被删除
