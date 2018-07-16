@@ -14,3 +14,4 @@
 
 1. [A_string](A_string.md)：第一章文本部分内容，主要讲到了可以使用的几个库，其中序列比较可以推广到其他方面
 2. [B_datastructure](B_datastructure.md): 第二章的内容，主要包括了非内置数据结构
+3. [C_algorithms](C_algorithms.md)：第三章的内容，针对高效精巧的实现算法，讲解了对纯过程式编程、面向对象编程和函数式编程三种方式应用
