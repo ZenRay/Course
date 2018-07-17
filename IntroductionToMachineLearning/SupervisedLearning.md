@@ -79,13 +79,25 @@
 
      ![](https://pythonprogramming.net/static/images/machine-learning/support-vector-width.png)
 
-     **这里存在理解问题尚未解决**
-
   关于更详细的 `SVM`推导内容 内容可以参考博客 [支持向量机通俗导论（理解SVM的三层境界](https://blog.csdn.net/v_july_v/article/details/7624837)
 
+### **SVM 这里存在理解问题尚未解决**
 
+### 非参数类模型
 
+以上使用的模型都是参数类模型，还有一些模型可以不通过参数进行构建：`KNN`, `Decision Trees`, `Random Forests`
 
+#### `KNN` 模型
+
+其模型的主要思想比较简洁，即寻找 `k` 个邻近数据点的平均值或者众数，以确认数据的标签。参考 [wikipedia 解释](https://en.wikipedia.org/wiki/K-nearest_neighbors_algorithm) 。对于 `KNN` 模型可以解决 **连续性数据** 和 **分类型数据**（这样可以解决分类型数据，例如猫狗分类。这可以使用众数来构建模型）。
+
+* 流程：例如对连续型数据（房价预测）——1）获得数据，需要将各特征转换为训练数据集矩阵；2）通过相似性将数据集进行排序；3）筛选出 `k` 个数据的平均值
+
+  这里模型的重点是定义和计算“最近”距离特征。而常用的测量方式是使用 **欧式距离**，另一种计算距离的方式是 **曼哈顿距离（Manhattan Distance）**——在特定情况下，它更有用，例如解决司机的驾驶距离问题
+
+* 在进行 `KNN` 模型构建的过程中，需要通过 `Cross-validation` 进行选择 `k` 值来调参。需要注意的是在筛选 `k` 值的过程中，高的 `k` 值虽然可以避免过拟合，但是也会产生高偏差和低灵活性（**Inflexible**）的问题
+
+* 实际应用中， `KNN` 不仅可以解决分类和回归问题，还可以用于解决缺失数据的问题——通过 `KNN` 来进行插入值。参考 [R语言中的缺失值处理](http://www.ituring.com.cn/article/214504) 
 
 ## 名词解释
 
