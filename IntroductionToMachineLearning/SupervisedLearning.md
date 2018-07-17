@@ -65,7 +65,23 @@
 
   ![](../img/SVM.png)
 
-* 优化方面 1）从原理上来说需要数据完整分割的情况下，得到最大的 `margin`；2）对于难以完整区分的数据，可以通过软化区分的定义——即允许少量数据划分错误，另外还有一种方案是将数据 **高维化**（例如将数据使用 $x^2, x^3, \cos(x)$ 转换——核心思想是 **kernel** [技巧](../img/kernel_tric.pdf)。
+* 流程：在确认超平面之前，需要首先找到支持向量；通过找到的支持向量，就可以找到超平面来最大化的将两侧数据区分开。区分超平面（**Separating Hyperlane**）是在其他两个超平面之间，而这两个超平面会经过支持向量（**Support Vector**——即数据点）
+
+* 优化方面： 1）从原理上来说需要数据完整分割的情况下，得到最大的 `margin`；2）对于难以完整区分的数据，可以通过软化区分的定义——即允许少量数据划分错误，另外还有一种方案是将数据 **高维化**（例如将数据使用 $x^2, x^3, \cos(x)$ 转换——核心思想是 **kernel** [技巧](../img/kernel_tric.pdf)。 $y_i=\vec{x}\cdot \vec{w}+b$ 是分类函数，其中 $\vec{w}$ 是超平面的法向量，而且分类结果是 $y_i\in\{-1, 1\}$，如果 $y_i=0$ 说明数据在决策边界上
+
+  1. 假设“正类”的结果中， $\vec{x}\cdot\vec{w}+b=1$，而“负类” 的结果是 $\vec{x}\cdot\vec{w}+b=-1$，通过 $y_i(\vec{x}\cdot\vec{w}+b) -1 =0$，可以将正类和负类转换，这样就得到了限制条件。而之前的公式中训练集的结果，可能是不完全满足 $\hat{y}\in\{-1, 1\}$，而是通过符号（即：$sign(\vec{x}\cdot\vec{w}+b)$）来验证结果是否属于正类还是负类 [参考](https://pythonprogramming.net/support-vector-assertions-machine-learning-tutorial/?completed=/vector-basics-machine-learning-tutorial/)
+
+  2. 到这里就是进行支持向量机的优化问题，需要得到的结果是 $\vec{w}$ 和 $b$ 两个的值。为了满足每个特征集，所以设定 $y_i(\vec{x}\cdot\vec{w}+b)\ge1$。这样可以得到测试数据集可能位于支持向量的超平面或决策边界之间，而训练数据集的结果则不可能。
+
+  3. 最终需要得到的结果最小化 $\parallel\vec{w}\parallel$，最大化 $b$ 的结果，以此满足 $y_i(\vec{x}\cdot\vec{w}+b)\ge1$。这里需要注意⚠️满足条件的 $\vec{w}$ 的条件，并非是最小化的 $\vec{w}$ 而是最小化的模长
+
+  4. 优化方法方面，有多种方法。方法之一是通过超平面上的支持向量得到宽度最大的结果，这里的好处是计算方式不需要使用 $b$，而表示式式 $width=(\vec{x_+}-\vec{x_\_})\cdot \frac{\vec{w}}{\parallel \vec{w}\parallel}$，示例如图：
+
+     ![](https://pythonprogramming.net/static/images/machine-learning/support-vector-width.png)
+
+     **这里存在理解问题尚未解决**
+
+  关于更详细的 `SVM`推导内容 内容可以参考博客 [支持向量机通俗导论（理解SVM的三层境界](https://blog.csdn.net/v_july_v/article/details/7624837)
 
 
 
@@ -233,3 +249,5 @@ $Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{\displaystyle{2
 6. [overview of the supervised learning process](https://github.com/rasbt/pattern_classification/blob/master/machine_learning/supervised_intro/introduction_to_supervised_machine_learning.md) 
 
    机器学习中监督式学习的一般流程
+
+7. [ref_convex_optimization](ref_convex_optimization.md) 凸优化参考笔记
