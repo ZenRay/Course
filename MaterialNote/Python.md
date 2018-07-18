@@ -216,6 +216,32 @@ import sys
 sys.stdout = codecs.getwriter("utf-8")(sys.stdout)
 ```
 
+### 使用完成重复数据进行并行运算验证算法
+
+`tee` 方法默认是产生两个相同元素的独立迭代器，在语义上和 `Unix` 的 `tee` 命令具有形同性。可以利用这种特点进行多种算法的并行处理。这样通过 `itertools` 的 `tee` 方法得到重复的数据，以进行并行验证算法。
+
+```python
+from itertools import *
+
+r = islice(count(), 5)
+i1, i2 = tee(r)
+
+print('r:', end=' ')
+for i in r:		# 这里对迭代器发生进行了调用
+    print(i, end=' ')
+    if i > 1:
+        break
+print()
+
+print('i1:', list(i1))
+print('i2:', list(i2))
+
+# output
+r: 0 1 2
+i1: [3, 4]
+i2: [3, 4]
+```
+
 
 
 ## 参考
