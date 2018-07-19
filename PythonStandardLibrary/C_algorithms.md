@@ -424,382 +424,969 @@ TypeError: myfunc() missing 1 required positional argument: 'a'
     result of a > b: False
   ```
 
-* 比较序（**Collation Order**）
+### 1.3 比较序（**Collation Order**）
 
-  由于 `Python 3.x` 废弃了老式比较函数，因此在 `sort` 等函数中也不再支持 `cmp` 参数。`cmp_to_key` 方法可以将它们转换为一个返回比对键（`collation key` ）的函数，这个键可用于确认元素的最终序列中的位置。
+由于 `Python 3.x` 废弃了老式比较函数，因此在 `sort` 等函数中也不再支持 `cmp` 参数。`cmp_to_key` 方法可以将它们转换为一个返回比对键（`collation key` ）的函数，这个键可用于确认元素的最终序列中的位置。
 
-  ```python
-  import functools
-  
-  
-  class MyObject:
-  
-      def __init__(self, val):
-          self.val = val
-  
-      def __str__(self):
-          return 'MyObject({})'.format(self.val)
-  
-  
-  def compare_obj(a, b):
-      """Old-style comparison function.
-      """
-      print('comparing {} and {}'.format(a, b))
-      if a.val < b.val:
-          return -1
-      elif a.val > b.val:
-          return 1
-      return 0
-  
-  
-  # Make a key function using cmp_to_key()
-  get_key = functools.cmp_to_key(compare_obj)
-  
-  def get_key_wrapper(o):
-      "Wrapper function for get_key to allow for print statements."
-      new_key = get_key(o)
-      print('key_wrapper({}) -> {!r}'.format(o, new_key))
-      return new_key
-  
-  
-  objs = [MyObject(x) for x in range(5, 0, -1)]
-  
-  for o in sorted(objs, key=get_key_wrapper):
-      print(o)
-      
-  # 在正常情况下，可以直接使用 cmp_to_key，但这的例子引入了一个额外的装饰器函数，从而在调用 key 函数时可以输入更多信息。而且这个类使用传入的老式比较函数来实现富比较 API
-  
-  # output
-  key_wrapper(MyObject(5)) -> <functools.KeyWrapper object at
-  0x1011c5530>
-  key_wrapper(MyObject(4)) -> <functools.KeyWrapper object at
-  0x1011c5510>
-  key_wrapper(MyObject(3)) -> <functools.KeyWrapper object at
-  0x1011c54f0>
-  key_wrapper(MyObject(2)) -> <functools.KeyWrapper object at
-  0x1011c5390>
-  key_wrapper(MyObject(1)) -> <functools.KeyWrapper object at
-  0x1011c5710>
-  comparing MyObject(4) and MyObject(5)
-  comparing MyObject(3) and MyObject(4)
-  comparing MyObject(2) and MyObject(3)
-  comparing MyObject(1) and MyObject(2)
-  MyObject(1)
-  MyObject(2)
-  MyObject(3)
-  MyObject(4)
-  MyObject(5)
-  ```
+```python
+import functools
 
-* 缓存（**Caching**）
 
-  `lru_cache` 装饰器将函数包装并放入最近常用的缓存。函数的参数被用于创建一个 `hash key`，且映射到结果。子序列调用相同的值时，会直接从缓存中抓取值而非调用函数。`cache_info` 方法可以获取缓存的状态， `cache_clear` 方法可以清除缓存
+class MyObject:
 
-  ```python
-  import functools
-  
-  
-  @functools.lru_cache()
-  def expensive(a, b):
-      print('expensive({}, {})'.format(a, b))
-      return a * b
-  
-  
-  MAX = 2
-  
-  print('First set of calls:')
-  for i in range(MAX):
-      for j in range(MAX):
-          expensive(i, j)
-  print(expensive.cache_info())
-  
-  print('\nSecond set of calls:')
-  for i in range(MAX + 1):
-      for j in range(MAX + 1):
-          expensive(i, j)
-  print(expensive.cache_info())
-  
-  print('\nClearing cache:')
-  expensive.cache_clear()
-  print(expensive.cache_info())
-  
-  print('\nThird set of calls:')
-  for i in range(MAX):
-      for j in range(MAX):
-          expensive(i, j)
-  print(expensive.cache_info())
-  # 这个例子多次调用 expensive 在嵌套循环中，当被清除缓存后需要重新计算
-  # output
-  First set of calls:
-  expensive(0, 0)
-  expensive(0, 1)
-  expensive(1, 0)
-  expensive(1, 1)
-  CacheInfo(hits=0, misses=4, maxsize=128, currsize=4)
-  
-  Second set of calls:
-  expensive(0, 2)
-  expensive(1, 2)
-  expensive(2, 0)
-  expensive(2, 1)
-  expensive(2, 2)
-  CacheInfo(hits=4, misses=9, maxsize=128, currsize=9)
-  
-  Clearing cache:
-  CacheInfo(hits=0, misses=0, maxsize=128, currsize=0)
-  
-  Third set of calls:
-  expensive(0, 0)
-  expensive(0, 1)
-  expensive(1, 0)
-  expensive(1, 1)
-  CacheInfo(hits=0, misses=4, maxsize=128, currsize=4)
-  
-  # ⚠️在长时间运行进程中，为了避免 cache 无节制增长限制的最大的缓存数目。但是可以通过 maxsize 参数来调整大小
-  
-  @functools.lru_cache(maxsize=2)		# 这里调整了数目
-  def expensive(a, b):
-      print('called expensive({}, {})'.format(a, b))
-      return a * b
-  
-  
-  def make_call(a, b):
-      print('({}, {})'.format(a, b), end=' ')
-      pre_hits = expensive.cache_info().hits
-      expensive(a, b)
-      post_hits = expensive.cache_info().hits
-      if post_hits > pre_hits:
-          print('cache hit')
-  
-  
-  print('Establish the cache')
-  make_call(1, 2)
-  make_call(2, 3)
-  
-  print('\nUse cached items')
-  make_call(1, 2)
-  make_call(2, 3)
-  
-  print('\nCompute a new value, triggering cache expiration')
-  make_call(3, 4)
-  
-  print('\nCache still contains one old item')
-  make_call(2, 3)
-  
-  print('\nOldest item needs to be recomputed')
-  make_call(1, 2)
-  
-  
-  # output
-  Establish the cache
-  (1, 2) called expensive(1, 2)
-  (2, 3) called expensive(2, 3)
-  
-  Use cached items
-  (1, 2) cache hit
-  (2, 3) cache hit
-  
-  Compute a new value, triggering cache expiration
-  (3, 4) called expensive(3, 4)
-  
-  Cache still contains one old item
-  (2, 3) cache hit
-  
-  Oldest item needs to be recomputed
-  (1, 2) called expensive(1, 2)
-  ```
+    def __init__(self, val):
+        self.val = val
 
-  另外所有的函数需要都能被 hash，否则将有异常 `TypeError`
+    def __str__(self):
+        return 'MyObject({})'.format(self.val)
 
-  ```python
-  import functools
-  
-  @functools.lru_cache(maxsize=2)
-  def expensive(a, b):
-      print('called expensive({}, {})'.format(a, b))
-      return a * b
-  
-  
-  def make_call(a, b):
-      print('({}, {})'.format(a, b), end=' ')
-      pre_hits = expensive.cache_info().hits
-      expensive(a, b)
-      post_hits = expensive.cache_info().hits
-      if post_hits > pre_hits:
-          print('cache hit')
-  
-  
-  make_call(1, 2)
-  
-  try:
-      make_call([1], 2)	# 列表不可以 hash
-  except TypeError as err:
-      print('ERROR: {}'.format(err))
-  
-  try:
-      make_call(1, {'2': 'two'})
-  except TypeError as err:
-      print('ERROR: {}'.format(err))
-      
-  # output
-  (1, 2) called expensive(1, 2)
-  ([1], 2) ERROR: unhashable type: 'list'
-  (1, {'2': 'two'}) ERROR: unhashable type: 'dict'
-  ```
 
-* `Reducing a data set`
+def compare_obj(a, b):
+    """Old-style comparison function.
+    """
+    print('comparing {} and {}'.format(a, b))
+    if a.val < b.val:
+        return -1
+    elif a.val > b.val:
+        return 1
+    return 0
 
-  `reduce` 函数可以接受一个可调用对象和序列数据作为输入，并且以之前的可调用对象，对序列数据进行计算输出一个单一的值
 
-  ```python
-  import functools
-  
-  
-  def do_reduce(a, b):
-      print('do_reduce({}, {})'.format(a, b))
-      return a + b
-  
-  
-  data = range(1, 5)
-  print(data)
-  result = functools.reduce(do_reduce, data)
-  print('result: {}'.format(result))
-  
-  # output
-  range(1, 5)
-  do_reduce(1, 2)
-  do_reduce(3, 3)
-  do_reduce(6, 4)
-  result: 10
-      
-  # 如果使用了其他 initialize 参数，是用于替换已有参数的第一参数
-  data = range(1, 5)
-  print(data)
-  result = functools.reduce(do_reduce, data, 99)		# 这里的 99 将替换掉序列中的第一个数据 1，所以序列变为了 [99, 2, 3, 4]
-  print('result: {}'.format(result))
-  
-  # output
-  range(1, 5)
-  do_reduce(99, 1)
-  do_reduce(100, 2)
-  do_reduce(102, 3)
-  do_reduce(105, 4)
-  result: 109
-      
-  # 但是当序列中是单个值时，initialize 参数将被用于直接计算；如果没有值的序列，那么将直接被替换
-  print('Single item in sequence:',
-        functools.reduce(do_reduce, [1]))
-  
-  print('Single item in sequence with initializer:',
-        functools.reduce(do_reduce, [1], 99))		# 此时将被用于直接相加，而不会发生替换
-  
-  print('Empty sequence with initializer:',
-        functools.reduce(do_reduce, [], 99))		# 此时数据将直接作为参数计算，返回结果，这里也不会报错
-  
-  try:
-      print('Empty sequence:', functools.reduce(do_reduce, []))		# 空序列将报错
-  except TypeError as err:
-      print('ERROR: {}'.format(err))
-      
-  # output
-  Single item in sequence: 1
-  do_reduce(99, 1)
-  Single item in sequence with initializer: 100
-  Empty sequence with initializer: 99
-  ERROR: reduce() of empty sequence with no initial value
-  ```
+# Make a key function using cmp_to_key()
+get_key = functools.cmp_to_key(compare_obj)
 
-* 通用函数（**Generic Function**）
+def get_key_wrapper(o):
+    "Wrapper function for get_key to allow for print statements."
+    new_key = get_key(o)
+    print('key_wrapper({}) -> {!r}'.format(o, new_key))
+    return new_key
 
-  在动态类型语言中，会因为数据类型不同而导致运算符有不同作用。为了避免因为这类行为差异，而使用 `singledispatch` 装饰符来隔绝到不同的函数中（⚠️，实际是使用 `register` 方法的特性来作为替换不同数据类型的函数运行）
 
-  ```python
-  import functools
-  
-  @functools.singledispatch		# 这里需要使用 singledispatch 来将 “原函数”包装起来，作为非强调数据类型的函数运行
-  def myfunc(arg):
-      print('default myfunc({!r})'.format(arg))
-  
-  @myfunc.register(int)		# 这里使用 register 方法作为强调函数不同数据类型运行方式，注意这里使用的类
-  def myfunc_int(arg):
-      print('myfunc_int({})'.format(arg))
-  
-  
-  @myfunc.register(list)		# 这里使用 register 方法作为强调函数不同数据类型运行方式
-  def myfunc_list(arg):
-      print('myfunc_list()')
-      for item in arg:
-          print('  {}'.format(item))
-  
-  
-  myfunc('string argument')
-  myfunc(1)
-  myfunc(2.3)		# 这里的 float 数据将直接被被原函数调用
-  myfunc(['a', 'b', 'c'])
-  
-  # output
-  default myfunc('string argument')
-  myfunc_int(1)
-  default myfunc(2.3)
-  myfunc_list()
-    a
-    b
-    c
-      
-  # 如果存在类的继承的话，将使用最接近的匹配继承顺序——这里包括参数顺序，来使用对应的类
-  class A:
-      pass
-  
-  class B(A):		# 继承 A
-      pass
-  
-  
-  class C(A):		# 继承 A
-      pass
-  
-  
-  class D(B):		# 继承 B
-      pass
-  
-  
-  class E(C, D):
-      pass
-  
-  @functools.singledispatch
-  def myfunc(arg):
-      print('default myfunc({})'.format(arg.__class__.__name__))
-  
-  
-  @myfunc.register(A)
-  def myfunc_A(arg):
-      print('myfunc_A({})'.format(arg.__class__.__name__))
-  
-  
-  @myfunc.register(B)
-  def myfunc_B(arg):
-      print('myfunc_B({})'.format(arg.__class__.__name__))
-  
-  
-  @myfunc.register(C)
-  def myfunc_C(arg):
-      print('myfunc_C({})'.format(arg.__class__.__name__))
-  
-  
-  myfunc(A())
-  myfunc(B())
-  myfunc(C())
-  myfunc(D())		# 因为最近的继承来自于 B，所以会优先调用 myfunc_B
-  myfunc(E())		# 在顺序上来说，C 在前优先判断 C 的继承
-  
-  # output
-  myfunc_A(A)
-  myfunc_B(B)
-  myfunc_C(C)
-  myfunc_B(D)
-  myfunc_C(E)
-  ```
+objs = [MyObject(x) for x in range(5, 0, -1)]
 
-  
+for o in sorted(objs, key=get_key_wrapper):
+    print(o)
+    
+# 在正常情况下，可以直接使用 cmp_to_key，但这的例子引入了一个额外的装饰器函数，从而在调用 key 函数时可以输入更多信息。而且这个类使用传入的老式比较函数来实现富比较 API
+
+# output
+key_wrapper(MyObject(5)) -> <functools.KeyWrapper object at
+0x1011c5530>
+key_wrapper(MyObject(4)) -> <functools.KeyWrapper object at
+0x1011c5510>
+key_wrapper(MyObject(3)) -> <functools.KeyWrapper object at
+0x1011c54f0>
+key_wrapper(MyObject(2)) -> <functools.KeyWrapper object at
+0x1011c5390>
+key_wrapper(MyObject(1)) -> <functools.KeyWrapper object at
+0x1011c5710>
+comparing MyObject(4) and MyObject(5)
+comparing MyObject(3) and MyObject(4)
+comparing MyObject(2) and MyObject(3)
+comparing MyObject(1) and MyObject(2)
+MyObject(1)
+MyObject(2)
+MyObject(3)
+MyObject(4)
+MyObject(5)
+```
+### 1.4 缓存（**Caching**）
+
+`lru_cache` 装饰器将函数包装并放入最近常用的缓存。函数的参数被用于创建一个 `hash key`，且映射到结果。子序列调用相同的值时，会直接从缓存中抓取值而非调用函数。`cache_info` 方法可以获取缓存的状态， `cache_clear` 方法可以清除缓存
+
+```python
+import functools
+
+
+@functools.lru_cache()
+def expensive(a, b):
+    print('expensive({}, {})'.format(a, b))
+    return a * b
+
+
+MAX = 2
+
+print('First set of calls:')
+for i in range(MAX):
+    for j in range(MAX):
+        expensive(i, j)
+print(expensive.cache_info())
+
+print('\nSecond set of calls:')
+for i in range(MAX + 1):
+    for j in range(MAX + 1):
+        expensive(i, j)
+print(expensive.cache_info())
+
+print('\nClearing cache:')
+expensive.cache_clear()
+print(expensive.cache_info())
+
+print('\nThird set of calls:')
+for i in range(MAX):
+    for j in range(MAX):
+        expensive(i, j)
+print(expensive.cache_info())
+# 这个例子多次调用 expensive 在嵌套循环中，当被清除缓存后需要重新计算
+# output
+First set of calls:
+expensive(0, 0)
+expensive(0, 1)
+expensive(1, 0)
+expensive(1, 1)
+CacheInfo(hits=0, misses=4, maxsize=128, currsize=4)
+
+Second set of calls:
+expensive(0, 2)
+expensive(1, 2)
+expensive(2, 0)
+expensive(2, 1)
+expensive(2, 2)
+CacheInfo(hits=4, misses=9, maxsize=128, currsize=9)
+
+Clearing cache:
+CacheInfo(hits=0, misses=0, maxsize=128, currsize=0)
+
+Third set of calls:
+expensive(0, 0)
+expensive(0, 1)
+expensive(1, 0)
+expensive(1, 1)
+CacheInfo(hits=0, misses=4, maxsize=128, currsize=4)
+
+# ⚠️在长时间运行进程中，为了避免 cache 无节制增长限制的最大的缓存数目。但是可以通过 maxsize 参数来调整大小
+
+@functools.lru_cache(maxsize=2)		# 这里调整了数目
+def expensive(a, b):
+    print('called expensive({}, {})'.format(a, b))
+    return a * b
+
+
+def make_call(a, b):
+    print('({}, {})'.format(a, b), end=' ')
+    pre_hits = expensive.cache_info().hits
+    expensive(a, b)
+    post_hits = expensive.cache_info().hits
+    if post_hits > pre_hits:
+        print('cache hit')
+
+
+print('Establish the cache')
+make_call(1, 2)
+make_call(2, 3)
+
+print('\nUse cached items')
+make_call(1, 2)
+make_call(2, 3)
+
+print('\nCompute a new value, triggering cache expiration')
+make_call(3, 4)
+
+print('\nCache still contains one old item')
+make_call(2, 3)
+
+print('\nOldest item needs to be recomputed')
+make_call(1, 2)
+
+
+# output
+Establish the cache
+(1, 2) called expensive(1, 2)
+(2, 3) called expensive(2, 3)
+
+Use cached items
+(1, 2) cache hit
+(2, 3) cache hit
+
+Compute a new value, triggering cache expiration
+(3, 4) called expensive(3, 4)
+
+Cache still contains one old item
+(2, 3) cache hit
+
+Oldest item needs to be recomputed
+(1, 2) called expensive(1, 2)
+```
+
+另外所有的函数需要都能被 hash，否则将有异常 `TypeError`
+
+```python
+import functools
+
+@functools.lru_cache(maxsize=2)
+def expensive(a, b):
+    print('called expensive({}, {})'.format(a, b))
+    return a * b
+
+
+def make_call(a, b):
+    print('({}, {})'.format(a, b), end=' ')
+    pre_hits = expensive.cache_info().hits
+    expensive(a, b)
+    post_hits = expensive.cache_info().hits
+    if post_hits > pre_hits:
+        print('cache hit')
+
+
+make_call(1, 2)
+
+try:
+    make_call([1], 2)	# 列表不可以 hash
+except TypeError as err:
+    print('ERROR: {}'.format(err))
+
+try:
+    make_call(1, {'2': 'two'})
+except TypeError as err:
+    print('ERROR: {}'.format(err))
+    
+# output
+(1, 2) called expensive(1, 2)
+([1], 2) ERROR: unhashable type: 'list'
+(1, {'2': 'two'}) ERROR: unhashable type: 'dict'
+```
+
+### 1.5 `Reducing a data set`
+
+`reduce` 函数可以接受一个可调用对象和序列数据作为输入，并且以之前的可调用对象，对序列数据进行计算输出一个单一的值
+
+```python
+import functools
+
+
+def do_reduce(a, b):
+    print('do_reduce({}, {})'.format(a, b))
+    return a + b
+
+
+data = range(1, 5)
+print(data)
+result = functools.reduce(do_reduce, data)
+print('result: {}'.format(result))
+
+# output
+range(1, 5)
+do_reduce(1, 2)
+do_reduce(3, 3)
+do_reduce(6, 4)
+result: 10
+    
+# 如果使用了其他 initialize 参数，是用于替换已有参数的第一参数
+data = range(1, 5)
+print(data)
+result = functools.reduce(do_reduce, data, 99)		# 这里的 99 将替换掉序列中的第一个数据 1，所以序列变为了 [99, 2, 3, 4]
+print('result: {}'.format(result))
+
+# output
+range(1, 5)
+do_reduce(99, 1)
+do_reduce(100, 2)
+do_reduce(102, 3)
+do_reduce(105, 4)
+result: 109
+    
+# 但是当序列中是单个值时，initialize 参数将被用于直接计算；如果没有值的序列，那么将直接被替换
+print('Single item in sequence:',
+      functools.reduce(do_reduce, [1]))
+
+print('Single item in sequence with initializer:',
+      functools.reduce(do_reduce, [1], 99))		# 此时将被用于直接相加，而不会发生替换
+
+print('Empty sequence with initializer:',
+      functools.reduce(do_reduce, [], 99))		# 此时数据将直接作为参数计算，返回结果，这里也不会报错
+
+try:
+    print('Empty sequence:', functools.reduce(do_reduce, []))		# 空序列将报错
+except TypeError as err:
+    print('ERROR: {}'.format(err))
+    
+# output
+Single item in sequence: 1
+do_reduce(99, 1)
+Single item in sequence with initializer: 100
+Empty sequence with initializer: 99
+ERROR: reduce() of empty sequence with no initial value
+```
+
+### 1.6 通用函数（**Generic Function**）
+
+在动态类型语言中，会因为数据类型不同而导致运算符有不同作用。为了避免因为这类行为差异，而使用 `singledispatch` 装饰符来隔绝到不同的函数中（⚠️，实际是使用 `register` 方法的特性来作为替换不同数据类型的函数运行）
+
+```python
+import functools
+
+@functools.singledispatch		# 这里需要使用 singledispatch 来将 “原函数”包装起来，作为非强调数据类型的函数运行
+def myfunc(arg):
+    print('default myfunc({!r})'.format(arg))
+
+@myfunc.register(int)		# 这里使用 register 方法作为强调函数不同数据类型运行方式，注意这里使用的类
+def myfunc_int(arg):
+    print('myfunc_int({})'.format(arg))
+
+
+@myfunc.register(list)		# 这里使用 register 方法作为强调函数不同数据类型运行方式
+def myfunc_list(arg):
+    print('myfunc_list()')
+    for item in arg:
+        print('  {}'.format(item))
+
+
+myfunc('string argument')
+myfunc(1)
+myfunc(2.3)		# 这里的 float 数据将直接被被原函数调用
+myfunc(['a', 'b', 'c'])
+
+# output
+default myfunc('string argument')
+myfunc_int(1)
+default myfunc(2.3)
+myfunc_list()
+  a
+  b
+  c
+    
+# 如果存在类的继承的话，将使用最接近的匹配继承顺序——这里包括参数顺序，来使用对应的类
+class A:
+    pass
+
+class B(A):		# 继承 A
+    pass
+
+
+class C(A):		# 继承 A
+    pass
+
+
+class D(B):		# 继承 B
+    pass
+
+
+class E(C, D):
+    pass
+
+@functools.singledispatch
+def myfunc(arg):
+    print('default myfunc({})'.format(arg.__class__.__name__))
+
+
+@myfunc.register(A)
+def myfunc_A(arg):
+    print('myfunc_A({})'.format(arg.__class__.__name__))
+
+
+@myfunc.register(B)
+def myfunc_B(arg):
+    print('myfunc_B({})'.format(arg.__class__.__name__))
+
+
+@myfunc.register(C)
+def myfunc_C(arg):
+    print('myfunc_C({})'.format(arg.__class__.__name__))
+
+
+myfunc(A())
+myfunc(B())
+myfunc(C())
+myfunc(D())		# 因为最近的继承来自于 B，所以会优先调用 myfunc_B
+myfunc(E())		# 在顺序上来说，C 在前优先判断 C 的继承
+
+# output
+myfunc_A(A)
+myfunc_B(B)
+myfunc_C(C)
+myfunc_B(D)
+myfunc_C(E)
+```
+
+## 2. `Itertools` 迭代器函数
+
+作用，`itertools` 模块提供了一组函数用于处理序列数据集。它是模仿了函数式编程语言例如 [Clojure](https://clojure.org/) ，[Haskell](https://www.haskell.org/) 等的特点。它们处理序列块而且使用内存高效，而且可以联结为在一起用于表达更复杂的迭代算法。另外重要特点是基于迭代器的算法可以提供更好的内存使用特性，而迭代器是用于管理数据的方式，不需要将所有数据都同时存储在内存中，从而减少内存使用，减少数据交换以及其他副作用。
+
+```python
+"__doc__", "__loader__", "__name__", "__package__", "__spec__", "_grouper", "_tee", "_tee_dataobject", "accumulate", "chain", "combinations", "combinations_with_replacement", "compress", "count", "cycle", "dropwhile", "filterfalse", "groupby", "islice", "permutations", "product", "repeat", "starmap", "takewhile", "tee", "zip_longest"
+```
+
+
+
+### 2.1 合并和分解迭代器——Merging And Spliting Iterator
+
+`chain` 函数使用多个迭代器作为参数，并且返回一个迭代器，这个迭代器包含了多个所有迭代器的内容。
+
+```python
+from itertools import *
+
+for i in chain([1, 2, 3], ['a', 'b', 'c']):
+    print(i, end=' ')
+print()
+# output
+1 2 3 a b c
+```
+
+如果已经未知的多个迭代器提前被组合，或者需要逐步被检查。这就需要使用`chain.from_iterable` 方法来创建一个 `chain`
+
+```python
+def make_iterables_to_chain():
+    yield [1, 2, 3]
+    yield ['a', 'b', 'c']
+
+
+for i in chain.from_iterable(make_iterables_to_chain()):
+    print(i, end=' ')
+print()
+
+# output
+1 2 3 a b c
+```
+
+⚠️内置的 `zip` 方法其实也是有元组作为元素的迭代器。但是当遇到第一个迭代器被消耗完，`zip` 将终止。为了避免该种情况发生，可以使用 `zip_longest` 方法来完成——被提前消耗完的迭代器将使用 `None ` 来代替元素
+
+```python
+from itertools import *
+r1 = range(3)
+r2 = range(2)
+
+print('zip stops early:')
+print(list(zip(r1, r2)))
+
+r1 = range(3)
+r2 = range(2)
+
+print('\nzip_longest processes all of the values:')
+print(list(zip_longest(r1, r2)))
+
+# output
+zip stops early:
+[(0, 0), (1, 1)]
+
+zip_longest processes all of the values:
+[(0, 0), (1, 1), (2, None)]
+```
+
+`islice` 方法，可以作为切片的迭代器，后续参数是作为索引值。其同样具有三个参数，`start`, `end`, `step`，而其中 `start`, `step` 是作为可选参数
+
+```python
+from itertools import *
+
+print('Stop at 5:')
+for i in islice(range(100), 5):
+    print(i, end=' ')
+print('\n')
+
+print('Start at 5, Stop at 10:')
+for i in islice(range(100), 5, 10):
+    print(i, end=' ')
+print('\n')
+
+print('By tens to 100:')
+for i in islice(range(100), 0, 100, 10):
+    print(i, end=' ')
+print('\n')
+
+# output
+Stop at 5:
+0 1 2 3 4
+
+Start at 5, Stop at 10:
+5 6 7 8 9
+
+By tens to 100:
+0 10 20 30 40 50 60 70 80 90
+```
+
+`tee` 方法默认是产生两个相同元素的独立迭代器，在语义上和 `Unix` 的 `tee` 命令具有形同性。可以利用这种特点进行多种算法的并行处理。另外需要注意⚠️，`tee` 需要迭代器作为输入，如果原始迭代器发生了使用，数据会发生变更
+
+```python
+from itertools import *
+
+r = islice(count(), 5)
+i1, i2 = tee(r)
+
+print('r:', end=' ')
+for i in r:		# 这里对迭代器发生进行了调用
+    print(i, end=' ')
+    if i > 1:
+        break
+print()
+
+print('i1:', list(i1))
+print('i2:', list(i2))
+
+# output
+r: 0 1 2
+i1: [3, 4]
+i2: [3, 4]
+```
+
+### 2.2 转换输入——`Converting Map`
+
+内置的 `map` 函数可以调用一个函数对输出的迭代器（**Iterator**）进行处理，返回值。当迭代器耗尽时，终止运行。`startmap` 方法具有相似功能，但是它会将结果中的元素分隔开给独立的迭代器。
+
+```python
+from itertools import *
+
+values = [(0, 5), (1, 6), (2, 7), (3, 8), (4, 9)]
+
+for i in starmap(lambda x, y: (x, y, x * y), values):
+    print('{} * {} = {}'.format(*i))		# 这里使用了解包的方式打开元素
+    
+# output
+0 * 5 = 0
+1 * 6 = 6
+2 * 7 = 14
+3 * 8 = 24
+4 * 9 = 36
+
+starmap(lambda x, y: (x, y, x * y), values)
+# output
+<itertools.starmap at 0x10fd5a390>
+
+[i for i in starmap(lambda x, y: (x, y, x * y), values)]
+# output
+[(0, 5, 0), (1, 6, 6), (2, 7, 14), (3, 8, 24), (4, 9, 36)]		# 这两步验证了结果得到的结果是一个迭代器
+```
+
+### 2.3 产生新值——`Producing New values`
+
+`count` 方法可以对迭代数据产生一个，累加的计数。默认值是 `0`，每次迭代可以在数值上进行累加。另外可以传入两个参数，将两个值每步累加
+
+```python
+import fractions
+from itertools import *
+
+for i in zip(count(1), ['a', 'b', 'c']):
+    print(i)
+    
+# output
+(1, 'a')
+(2, 'b')
+(3, 'c')
+
+# 使用两个参数作为累加计数参数
+start = fractions.Fraction(1, 3)
+step = fractions.Fraction(1, 3)
+
+for i in zip(count(start, step), ['a', 'b', 'c']):
+    print('{}: {}'.format(*i))
+    
+# output
+1/3: a
+2/3: b
+1: c
+```
+
+`cycle` 函数会将迭代器内容循环，默认上无线循环的——这样会导致内存消耗。下面是使用 `zip` 来控制循环
+
+```python
+for i in zip(range(7), cycle(['a', 'b', 'c'])):
+    print(i)
+    
+# output
+(0, 'a')
+(1, 'b')
+(2, 'c')
+(3, 'a')
+(4, 'b')
+(5, 'c')
+(6, 'a')
+
+# 另外还有一个可以控制产生重复值的方法 repeat，它需要第二个参数来限制循环次数
+for i in repeat('over-and-over', 5):
+    print(i)
+    
+# output
+over-and-over
+over-and-over
+over-and-over
+over-and-over
+over-and-over
+
+# 下面是综合使用 map repeat 等方式来进行数据计算
+for i in map(lambda x, y: (x, y, x * y), repeat(2), range(5)):
+    print('{:d} * {:d} = {:d}'.format(*i))
+    
+# output
+2 * 0 = 0
+2 * 1 = 2
+2 * 2 = 4
+2 * 3 = 6
+2 * 4 = 8
+```
+
+### 2.4 过滤——`Filtering`
+
+`dropwhile` 方法返回一个迭代器，它会生成输入迭代器中条件第一次为 `False` 之后的元素——即遇见第一个不满足条件之后的元素被作为新的迭代器。
+
+```python
+def should_drop(x):
+    print('Testing:', x)
+    return x < 1
+
+
+for i in dropwhile(should_drop, [-1, 0, 1, 2, -2]):
+    print('Yielding:', i)
+    
+# output
+Testing: -1
+Testing: 0
+Testing: 1		# 1 是第一个不满足条件的迭代器，但是还是会运行 Test。但包括其在内的其他元素都被作为新的迭代器
+Yielding: 1
+Yielding: 2
+Yielding: -2
+```
+
+`takewhile` 存在差异的，它是对整体进行扫描，如果为 `True` 则作为新迭代器中的元素，到不满足时之后的所有元素都被抛弃
+
+```python
+def should_take(x):
+    print('Testing:', x)
+    return x < 2
+
+
+for i in takewhile(should_take, [-1, 0, 1, 2, -2]):
+    print('Yielding:', i)
+    
+# output
+Testing: -1
+Yielding: -1
+Testing: 0
+Yielding: 0
+Testing: 1
+Yielding: 1
+Testing: 2		# 不满足条件而把之后的所有元素都抛弃
+```
+
+`filter` 可以筛选出每一个满足条件的元素，而使用 `filterfalse` 会筛选出每个不满足条件的元素。
+
+```python
+def check_item(x):
+    print('Testing:', x)
+    return x < 1
+
+
+for i in filter(check_item, [-1, 0, 1, 2, -2]):
+    print('Yielding:', i)
+    
+# output
+Testing: -1
+Yielding: -1
+Testing: 0
+Yielding: 0
+Testing: 1
+Testing: 2
+Testing: -2
+Yielding: -2
+
+# 使用 filterfalse 用于筛选不满足条件的元素
+for i in filterfalse(check_item, [-1, 0, 1, 2, -2]):
+    print('Yielding:', i)
+    
+# output
+Testing: -1
+Testing: 0
+Testing: 1
+Yielding: 1
+Testing: 2
+Yielding: 2
+Testing: -2
+```
+
+`compress` 方法可以使用另一种方法用于筛选迭代器的内容，它可以使用另一个迭代器的值——一般是布尔值，用于判断和筛选值
+
+```python
+every_third = cycle([False, False, True])	# 这里构建了一个条件
+data = range(1, 10)
+
+for i in compress(data, every_third):
+    print(i, end=' ')
+print()
+# output
+3 6 9
+
+# 下面是模拟 compress，但是没有完全使用布尔值来筛选数据——实际还是利用数据来模拟布尔值
+def compress(data, selectors):
+    # compress('ABCDEF', [1,0,1,0,1,1]) --> A C E F
+    return (d for d, s in zip(data, selectors) if s)
+```
+
+### 2.5 数据分组——`grouping data`
+
+`groupby` 函数依据一个公共的键来组织数据集。
+
+```python
+import functools
+from itertools import *
+import operator		# 可以用于输出一个 python 的操作符，但是以一个高效函数的方式来做
+import pprint
+
+
+@functools.total_ordering
+class Point:
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __repr__(self):
+        return '({}, {})'.format(self.x, self.y)
+
+    def __eq__(self, other):
+        return (self.x, self.y) == (other.x, other.y)
+
+    def __gt__(self, other):
+        return (self.x, self.y) > (other.x, other.y)
+
+
+# Create a dataset of Point instances
+data = list(map(Point,
+                cycle(islice(count(), 3)),
+                islice(count(), 7)))
+print('Data:')
+pprint.pprint(data, width=35)
+print()
+
+# Try to group the unsorted data based on X values
+print('Grouped, unsorted:')
+for k, g in groupby(data, operator.attrgetter('x')):
+    print(k, list(g))
+print()
+
+# Sort the data
+data.sort()
+print('Sorted:')
+pprint.pprint(data, width=35)
+print()
+
+# Group the sorted data based on X values
+print('Grouped, sorted:')
+for k, g in groupby(data, operator.attrgetter('x')):	# 这里使用了类属性来进行排序，得到了一个迭代器
+    print(k, list(g))
+print()
+
+# output
+Data:
+[(0, 0),
+ (1, 1),
+ (2, 2),
+ (0, 3),
+ (1, 4),
+ (2, 5),
+ (0, 6)]
+
+Grouped, unsorted:
+0 [(0, 0)]
+1 [(1, 1)]
+2 [(2, 2)]
+0 [(0, 3)]
+1 [(1, 4)]
+2 [(2, 5)]
+0 [(0, 6)]
+
+Sorted:
+[(0, 0),
+ (0, 3),
+ (0, 6),
+ (1, 1),
+ (1, 4),
+ (2, 2),
+ (2, 5)]
+
+Grouped, sorted:
+0 [(0, 0), (0, 3), (0, 6)]
+1 [(1, 1), (1, 4)]
+2 [(2, 2), (2, 5)]
+```
+
+### 2.6 合并输入——`Combining Input`
+
+`accumulate` 方法传入迭代器中第 `n` 和 `n+1` 两个数据到函数中，并且返回值以生成新的迭代器而不是原输入作为迭代器。
+
+```python
+print(list(accumulate(range(5))))	# [0, 1, 2, 3, 4] 是输入，将每步值进行累加
+print(list(accumulate('abcde')))
+
+# output
+[0, 1, 3, 6, 10]
+['a', 'ab', 'abc', 'abcd', 'abcde']
+
+# 该方法不仅可以进行累加，还可以传入其他函数作为新的累加函数
+def f(a, b):
+    print(a, b)		# 每一步都更新和输出相应的值
+    return b + a + b
+
+
+print(list(accumulate('abcde', f)))
+
+# output
+a b
+bab c
+cbabc d
+dcbabcd e
+['a', 'bab', 'cbabc', 'dcbabcd', 'edcbabcde']
+```
+
+对于迭代对象的数据替换，除了使用 `for` 循环还可以使用 `product` 方法，它会将输入作为笛卡尔积的方式生成新的迭代器。需要注意⚠️，产生的结果是是一个元组构成的迭代器
+
+```python
+FACE_CARDS = ('J', 'Q', 'K', 'A')
+SUITS = ('H', 'D', 'C', 'S')
+
+DECK = list(
+    product(
+        chain(range(2, 11), FACE_CARDS),
+        SUITS,
+    )
+)	# 这里每个列表内的元素是一个元组
+
+for card in DECK:
+    print('{:>2}{}'.format(*card), end=' ')
+    if card[1] == SUITS[-1]:
+        print()
+    
+# output
+ 2H  2D  2C  2S
+ 3H  3D  3C  3S
+ 4H  4D  4C  4S
+ 5H  5D  5C  5S
+ 6H  6D  6C  6S
+ 7H  7D  7C  7S
+ 8H  8D  8C  8S
+ 9H  9D  9C  9S
+10H 10D 10C 10S
+ JH  JD  JC  JS
+ QH  QD  QC  QS
+ KH  KD  KC  KS
+ AH  AD  AC  AS
+
+# 调整 product 的参数顺序会产生不同的结果
+FACE_CARDS = ('J', 'Q', 'K', 'A')
+SUITS = ('H', 'D', 'C', 'S')
+
+DECK = list(
+    product(
+        SUITS,
+        chain(range(2, 11), FACE_CARDS),
+    )
+)
+
+for card in DECK:
+    print('{:>2}{}'.format(card[1], card[0]), end=' ')		# 注意这里调整了 card 的元素顺序
+    if card[1] == FACE_CARDS[-1]:
+        print()
+        
+# output
+ 2H  3H  4H  5H  6H  7H  8H  9H 10H  JH  QH  KH  AH
+ 2D  3D  4D  5D  6D  7D  8D  9D 10D  JD  QD  KD  AD
+ 2C  3C  4C  5C  6C  7C  8C  9C 10C  JC  QC  KC  AC
+ 2S  3S  4S  5S  6S  7S  8S  9S 10S  JS  QS  KS  AS
+
+# 另外 product 可以传入 repeat 参数这样可以进行自乘得到，重复形式的笛卡尔积
+def show(iterable):
+    for i, item in enumerate(iterable, 1):
+        print(item, end=' ')
+        if (i % 3) == 0:
+            print()
+    print()
+
+
+print('Repeat 2:\n')
+show(list(product(range(3), repeat=2)))
+
+print('Repeat 3:\n')
+show(list(product(range(3), repeat=3)))
+
+# output
+Repeat 2:
+
+(0, 0) (0, 1) (0, 2)
+(1, 0) (1, 1) (1, 2)
+(2, 0) (2, 1) (2, 2)
+
+Repeat 3:
+
+(0, 0, 0) (0, 0, 1) (0, 0, 2)
+(0, 1, 0) (0, 1, 1) (0, 1, 2)
+(0, 2, 0) (0, 2, 1) (0, 2, 2)
+(1, 0, 0) (1, 0, 1) (1, 0, 2)
+(1, 1, 0) (1, 1, 1) (1, 1, 2)
+(1, 2, 0) (1, 2, 1) (1, 2, 2)
+(2, 0, 0) (2, 0, 1) (2, 0, 2)
+(2, 1, 0) (2, 1, 1) (2, 1, 2)
+(2, 2, 0) (2, 2, 1) (2, 2, 2)
+```
+
+`permutations` 会产生一个组合。
+
+```python
+def show(iterable):
+    first = None
+    for i, item in enumerate(iterable, 1):
+        if first != item[0]:
+            if first is not None:
+                print()
+            first = item[0]
+        print(''.join(item), end=' ')
+    print()
+
+
+print('All permutations:\n')
+show(permutations('abcd'))
+
+print('\nPairs:\n')
+show(permutations('abcd', r=2))		# r 可以控制元素
+
+# output
+All permutations:
+
+abcd abdc acbd acdb adbc adcb
+bacd badc bcad bcda bdac bdca
+cabd cadb cbad cbda cdab cdba
+dabc dacb dbac dbca dcab dcba
+
+Pairs:
+
+ab ac ad
+ba bc bd
+ca cb cd
+da db dc
+```
+
+另外还有一种是 `combinations` 方式，将输入成员进行组合——这些元素是包括了不重复的元素。另外还有一种方案可以对筛选出重复的元素，这里需要使用 `combinations_with_replacement` 方法
+
+```python
+def show(iterable):
+    first = None
+    for i, item in enumerate(iterable, 1):
+        if first != item[0]:
+            if first is not None:
+                print()
+            first = item[0]
+        print(''.join(item), end=' ')
+    print()
+
+
+print('Unique pairs:\n')
+show(combinations('abcd', r=2))
+
+# output
+Unique pairs:
+
+ab ac ad
+bc bd
+cd
+
+print('Unique pairs:\n')
+show(combinations_with_replacement('abcd', r=2))
+
+# output
+Unique pairs:
+
+aa ab ac ad
+bb bc bd
+cc cd
+dd
+```
+
+
 
 
 
@@ -866,3 +1453,7 @@ TypeError: myfunc() missing 1 required positional argument: 'a'
    ```
 
 4. [PEP 443](https://www.python.org/dev/peps/pep-0443) “Single-dispatch generic functions”
+
+5. [The Standard ML Basis Library](http://www.standardml.org/Basis/) The library for SML.
+
+6. [Standard ML - Wikipedia](https://en.wikipedia.org/wiki/Standard_ML) The library for SML.
