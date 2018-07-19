@@ -1386,6 +1386,362 @@ cc cd
 dd
 ```
 
+## 3. `operator` —— 内置操作符的函数接口
+
+作用是作为内置操作符的函数接口。因为在使用迭代器编程时，有时需要简单的表达式创建小函数，`operator` 模块定义了一些对应算数和内置比较操作，以达到不使用 `lambda` 等新函数的方式来完成的操作。
+
+```python
+"__abs__", "__add__", "__all__", "__and__", "__builtins__", "__cached__", "__concat__", "__contains__", "__delitem__", "__doc__", "__eq__", "__file__", "__floordiv__", "__ge__", "__getitem__", "__gt__", "__iadd__", "__iand__", "__iconcat__", "__ifloordiv__", "__ilshift__", "__imatmul__", "__imod__", "__imul__", "__index__", "__inv__", "__invert__", "__ior__", "__ipow__", "__irshift__", "__isub__", "__itruediv__", "__ixor__", "__le__", "__loader__", "__lshift__", "__lt__", "__matmul__", "__mod__", "__mul__", "__name__", "__ne__", "__neg__", "__not__", "__or__", "__package__", "__pos__", "__pow__", "__rshift__", "__setitem__", "__spec__", "__sub__", "__truediv__", "__xor__", "_abs", "abs", "add", "and_", "attrgetter", "concat", "contains", "countOf", "delitem", "eq", "floordiv", "ge", "getitem", "gt", "iadd", "iand", "iconcat", "ifloordiv", "ilshift", "imatmul", "imod", "imul", "index", "indexOf", "inv", "invert", "ior", "ipow", "irshift", "is_", "is_not", "isub", "itemgetter", "itruediv", "ixor", "le", "length_hint", "lshift", "lt", "matmul", "methodcaller", "mod", "mul", "ne", "neg", "not_", "or_", "pos", "pow", "rshift", "setitem", "sub", "truediv", "truth", "xor"
+```
+
+### 3.1 逻辑操作——`Logical Operations`
+
+有些函数可以使用来确定一个值的对应 `boolean` 值。
+
+```python
+from operator import *
+
+a = -1
+b = 5
+
+print('a =', a)
+print('b =', b)
+print()
+
+print('not_(a)     :', not_(a))		# 相当于使用 not a
+print('truth(a)    :', truth(a))	# 如果 a 为 True，那么返回真
+print('is_(a, b)   :', is_(a, b))	# 相当于 a is b
+print('is_not(a, b):', is_not(a, b))
+
+# output
+a = -1
+b = 5
+
+not_(a)     : False
+truth(a)    : True
+is_(a, b)   : False
+is_not(a, b): True
+```
+
+### 3.2 比较操作符——`Comparison Operators`
+
+支持所有富比较操作符
+
+```python
+from operator import *
+
+a = 1
+b = 5.0
+
+print('a =', a)
+print('b =', b)
+for func in (lt, le, eq, ne, ge, gt):		# 相当于<, <=, ==, >=, 和 >
+    print('{}(a, b): {}'.format(func.__name__, func(a, b)))
+    
+# output
+a = 1
+b = 5.0
+lt(a, b): True
+le(a, b): True
+eq(a, b): False
+ne(a, b): True
+ge(a, b): False
+gt(a, b): False
+```
+
+### 3.3 算数操作符——`Arithmetic Operators`
+
+支持处理数字值的算数操作符
+
+```python
+from operator import *
+
+a = -1
+b = 5.0
+c = 2
+d = 6
+
+print('a =', a)
+print('b =', b)
+print('c =', c)
+print('d =', d)
+
+print('\nPositive/Negative:')
+print('abs(a):', abs(a))
+print('neg(a):', neg(a))
+print('neg(b):', neg(b))
+print('pos(a):', pos(a))
+print('pos(b):', pos(b))
+
+print('\nArithmetic:')
+print('add(a, b)     :', add(a, b))
+print('floordiv(a, b):', floordiv(a, b))	# 整数除法，没有小数点，向下取整
+print('floordiv(d, c):', floordiv(d, c))
+print('mod(a, b)     :', mod(a, b))
+print('mul(a, b)     :', mul(a, b))
+print('pow(c, d)     :', pow(c, d))
+print('sub(b, a)     :', sub(b, a))
+print('truediv(a, b) :', truediv(a, b))	# 浮点数除法
+print('truediv(d, c) :', truediv(d, c))
+
+print('\nBitwise:')
+print('and_(c, d)  :', and_(c, d))
+print('invert(c)   :', invert(c))
+print('lshift(c, d):', lshift(c, d))
+print('or_(c, d)   :', or_(c, d))
+print('rshift(d, c):', rshift(d, c))
+print('xor(c, d)   :', xor(c, d))
+
+# output
+a = -1
+b = 5.0
+c = 2
+d = 6
+
+Positive/Negative:
+abs(a): 1
+neg(a): 1
+neg(b): -5.0
+pos(a): -1
+pos(b): 5.0
+
+Arithmetic:
+add(a, b)     : 4.0
+floordiv(a, b): -1.0
+floordiv(d, c): 3
+mod(a, b)     : 4.0
+mul(a, b)     : -5.0
+pow(c, d)     : 64
+sub(b, a)     : 6.0
+truediv(a, b) : -0.2
+truediv(d, c) : 3.0
+
+Bitwise:
+and_(c, d)  : 2
+invert(c)   : -3
+lshift(c, d): 128
+or_(c, d)   : 6
+rshift(d, c): 1
+xor(c, d)   : 4
+```
+
+### 3.3 序列操作符——`Sequence Operators`
+
+对序列的操作来说主要包括，建立序列，搜素元素，访问内容，从序列删除元素
+
+```python
+from operator import *
+
+a = [1, 2, 3]
+b = ['a', 'b', 'c']
+
+print('a =', a)
+print('b =', b)
+
+print('\nConstructive:')
+print('  concat(a, b):', concat(a, b))		# 拼接序列
+
+print('\nSearching:')
+print('  contains(a, 1)  :', contains(a, 1))	# 搜索判断是否存在
+print('  contains(b, "d"):', contains(b, "d"))
+print('  countOf(a, 1)   :', countOf(a, 1))		# 搜索存在的数量
+print('  countOf(b, "d") :', countOf(b, "d"))
+print('  indexOf(a, 5)   :', indexOf(a, 1))		# 返回存在的第一个索引值
+
+print('\nAccess Items:')
+print('  getitem(b, 1)                  :',
+      getitem(b, 1))
+print('  getitem(b, slice(1, 3))        :',
+      getitem(b, slice(1, 3)))
+print('  setitem(b, 1, "d")             :', end=' ')
+setitem(b, 1, "d")
+print(b)
+print('  setitem(a, slice(1, 3), [4, 5]):', end=' ')	# 这需要注意 setitem 和 delitem 会原地修改序列，而不会返回任何值
+setitem(a, slice(1, 3), [4, 5])
+print(a)
+
+print('\nDestructive:')
+print('  delitem(b, 1)          :', end=' ')
+delitem(b, 1)
+print(b)
+print('  delitem(a, slice(1, 3)):', end=' ')
+delitem(a, slice(1, 3))
+print(a)
+# output
+a = [1, 2, 3]
+b = ['a', 'b', 'c']
+
+Constructive:
+  concat(a, b): [1, 2, 3, 'a', 'b', 'c']
+
+Searching:
+  contains(a, 1)  : True
+  contains(b, "d"): False
+  countOf(a, 1)   : 1
+  countOf(b, "d") : 0
+  indexOf(a, 5)   : 0
+
+Access Items:
+  getitem(b, 1)                  : b
+  getitem(b, slice(1, 3))        : ['b', 'c']
+  setitem(b, 1, "d")             : ['a', 'd', 'c']
+  setitem(a, slice(1, 3), [4, 5]): [1, 4, 5]
+
+Destructive:
+  delitem(b, 1)          : ['a', 'c']
+  delitem(a, slice(1, 3)): [1]
+```
+
+### 3.4 原位操作符——`In-place Operator`
+
+原位操作符类似 `+=` 等方式，更多信息可以**参考官方文档**
+
+```
+a = -1
+b = 5.0
+c = [1, 2, 3]
+d = ['a', 'b', 'c']
+print('a =', a)
+print('b =', b)
+print('c =', c)
+print('d =', d)
+print()
+
+a = iadd(a, b)
+print('a = iadd(a, b) =>', a)
+print()
+
+c = iconcat(c, d)
+print('c = iconcat(c, d) =>', c)
+
+# output
+a = -1
+b = 5.0
+c = [1, 2, 3]
+d = ['a', 'b', 'c']
+
+a = iadd(a, b) => 4.0
+
+c = iconcat(c, d) => [1, 2, 3, 'a', 'b', 'c']
+```
+
+### 3.5 属性和元素获取——`Attribute and Item “Getters”`
+
+`getter` 方法是 `operator` 中使用最广泛地特征。它是运行时（**Runtime**）构建的某些可回调对象，用来获取对象的属性或序列的内容，在处理迭代器或生成器序列是特别有用——它可以降低开销，比 `lambda` 及其他函数开销小很多。 使用方法是 `attrgetter(x, n)` 其中 `n` 是属性名称，使用方式类似于 `lambda x, n: getattr(x, n)`。而对于取元素来说，`itemgetter(x, n)` 其中 `n` 是对应的可用键或者索引，类似于 `lambda x, n: x[n]`。
+
+```python
+from operator import *
+
+
+class MyObj:
+    """example class for attrgetter"""
+
+    def __init__(self, arg):
+        super().__init__()
+        self.arg = arg
+
+    def __repr__(self):
+        return 'MyObj({})'.format(self.arg)
+
+
+l = [MyObj(i) for i in range(5)]
+print('objects   :', l)
+
+# Extract the 'arg' value from each object
+g = attrgetter('arg')
+vals = [g(i) for i in l]
+print('arg values:', vals)
+
+# Sort using arg
+l.reverse()
+print('reversed  :', l)
+print('sorted    :', sorted(l, key=g))
+
+# output
+objects   : [MyObj(0), MyObj(1), MyObj(2), MyObj(3), MyObj(4)]
+arg values: [0, 1, 2, 3, 4]
+reversed  : [MyObj(4), MyObj(3), MyObj(2), MyObj(1), MyObj(0)]
+sorted    : [MyObj(0), MyObj(1), MyObj(2), MyObj(3), MyObj(4)]
+
+# 取元素
+l = [dict(val=-1 * i) for i in range(4)]
+print('Dictionaries:')
+print(' original:', l)
+g = itemgetter('val')
+vals = [g(i) for i in l]
+print('   values:', vals)
+print('   sorted:', sorted(l, key=g))
+
+print()
+l = [(i, i * -2) for i in range(4)]
+print('\nTuples:')
+print(' original:', l)
+g = itemgetter(1)
+vals = [g(i) for i in l]
+print('   values:', vals)
+print('   sorted:', sorted(l, key=g))
+
+# outpu
+Dictionaries:
+ original: [{'val': 0}, {'val': -1}, {'val': -2}, {'val': -3}]
+   values: [0, -1, -2, -3]
+   sorted: [{'val': -3}, {'val': -2}, {'val': -1}, {'val': 0}]
+
+
+Tuples:
+ original: [(0, 0), (1, -2), (2, -4), (3, -6)]
+   values: [0, -2, -4, -6]
+   sorted: [(3, -6), (2, -4), (1, -2), (0, 0)]
+```
+
+### 3.6 操作符和定制类的结合——`Combining Operators and Custom Classes`
+
+`operator` 中的函数通过对应的操作的标准 `Python` 接口完成工作，所以它不仅适用于内置类型，还可用于定制类，详情参考文档。从下面的示例爱看，更像是使用运算符重载。
+
+```python
+from operator import *
+
+
+class MyObj:
+    """Example for operator overloading"""
+
+    def __init__(self, val):
+        super(MyObj, self).__init__()
+        self.val = val
+
+    def __str__(self):
+        return 'MyObj({})'.format(self.val)
+
+    def __lt__(self, other):
+        """compare for less-than"""
+        print('Testing {} < {}'.format(self, other))
+        return self.val < other.val
+
+    def __add__(self, other):
+        """add values"""
+        print('Adding {} + {}'.format(self, other))
+        return MyObj(self.val + other.val)
+
+
+a = MyObj(1)
+b = MyObj(2)
+
+print('Comparison:')
+print(lt(a, b))
+
+print('\nArithmetic:')
+print(add(a, b))
+
+# output
+Comparison:
+Testing MyObj(1) < MyObj(2)
+True
+
+Arithmetic:
+Adding MyObj(1) + MyObj(2)
+MyObj(3)
+```
+
 
 
 
@@ -1457,3 +1813,5 @@ dd
 5. [The Standard ML Basis Library](http://www.standardml.org/Basis/) The library for SML.
 
 6. [Standard ML - Wikipedia](https://en.wikipedia.org/wiki/Standard_ML) The library for SML.
+
+7. [Standard library documentation for operator](https://docs.python.org/3.6/library/operator.html) 
