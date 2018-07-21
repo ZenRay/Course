@@ -115,19 +115,27 @@
 4. 可以处理多结果问题
 5. 进行的是白盒模型——模型中给定的条件是可见的，模型可以通过逻辑方式解释
 6. 可以通过统计学检验的方式验证模型，这样对模型的可信赖度是可描述的
-7. 即使咋模型假设的结果与真实模型提供的数据不一致，但表现结果可能依旧良好
+7. 即使模型假设的结果与真实模型提供的数据不一致，但表现结果可能依旧良好
+8. 可以用于进行数据探索，决策树是一个快速的方法来确认特征显著性的方法；同时可以依赖决策树来建立新的特征变量，以便对预计结果更有效，详情参考 [Trick To Enhance Power Of Regression Model](https://www.analyticsvidhya.com/blog/2013/10/trick-enhance-power-regression-model-2/) 。例如从上百个特征中，需要通过决策树的方法筛选出具有显著性特征
 
 同样的在其他方面需要注意缺点：
 
 1. 模型容易过拟合，因此需要使用其他策略以避免过拟合。例如剪枝，设置也节点所需最小样本树，或者设置树的最大深度
 2. 决策树模型不稳定，细微差异可能导致决策树的不同解释
-3. 在优化方面和简化概念方面，决策优化问题是一个 `NP` 问题。因此，实际上决策树是基于启发式算法的问题 [启发式搜索- Wikipedia](https://zh.wikipedia.org/wiki/%E5%90%AF%E5%8F%91%E5%BC%8F%E6%90%9C%E7%B4%A2) ——例如铜鼓即成学习训练多棵决策树缓解，它通过对特征和样本有放回随机采样来生成
+3. 在优化方面和简化概念方面，决策优化问题是一个 `NP` 问题。因此，实际上决策树是基于启发式算法的问题 [启发式搜索- Wikipedia](https://zh.wikipedia.org/wiki/%E5%90%AF%E5%8F%91%E5%BC%8F%E6%90%9C%E7%B4%A2) ——例如通过集成学习训练多棵决策树缓解局部最优解的问题，它通过对特征和样本有放回随机采样来生成
 4. 对某些特定的概念型模型难以使用决策树生成，例如 `XOR`，奇偶或者复用器的问题
 5. 数据不平衡会导致树模型偏差
+6. 对于连续性变量，决策树会通过分类化后，可能会导致信息损失
+
+
 
 #### `Random Forest` 模型—— `Decision Trees` 的融合
 
+由多个模型进行组合成的模型，这一般是一种赢的策略（**Winning Stategy**）。单一的决策树可能产生各种各样的错误，因为这是一种非黑即白的判断策略。随机深林（**Random Forest**）是一个“meta-estimator”，它通过聚合多个决策树，以此产生非常有用的结果。
 
+* 策略：1）特征筛选，通过将筛选有限的特征（例如：可以通过超参数来进行百分比选择特征）来创建节点，这样的目的是避免融合模型过分依赖，这样才能做出更有效的预测。2）每个树都是通过原始数据集的随机区分，这样可以随机性避免过拟合。通过这两种方案，可以避免树之间具有高相关性
+* 聚合方式：可以通过模型投票（**Modal Votes**）和平均值（**Averaging**）
+* 优点：它在模型处理上非常杰出，因为对低清洁数据也有高耐受性，同时能够分析出重要性特征
 
 ## 名词解释
 
@@ -149,10 +157,12 @@
   $$
   \begin{cases}
     P(y=1|x, \beta)=\frac{1}{1+e^{-\beta^Tx}} \\
-    P(x=0|x,\beta)=\frac{1}{1+e^{\beta^Tx}} =1-P(y=1|x,\beta) \\
+    P(y=0|x,\beta)=\frac{1}{1+e^{\beta^Tx}} =1-P(y=1|x,\beta) \\
   \end{cases} \\
   假设：h_\beta(x)=g(\beta^Tx)=\frac{1}{1+e^{-\beta^Tx}}
   $$
+
+
 
 
 
@@ -293,3 +303,21 @@ $Cost=\frac{\displaystyle{\sum_i^n((\beta_1x_i+\beta_0)-y_i)^2}}{\displaystyle{2
    机器学习中监督式学习的一般流程
 
 7. [ref_convex_optimization](ref_convex_optimization.md) 凸优化参考笔记
+
+8. [Tutorial To Implement k-Nearest Neighbors in Python From Scratch](https://machinelearningmastery.com/tutorial-to-implement-k-nearest-neighbors-in-python-from-scratch/) 
+
+   `KNN` 教程，给出了 `Python` 实现的代码
+
+9. [A Complete Tutorial on Tree Based Modeling from Scratch (in R & Python)](https://www.analyticsvidhya.com/blog/2016/04/complete-tutorial-tree-based-modeling-scratch-in-python/#thirteen)
+
+   `Decision Trees` 的相关术语：
+
+   * 根结点（**Root Node**）：表现的是全部总体或者样本，它将被用于分割到两个或多个同质集合中（**Homogeneous Sets**）
+   * 分割（**Splitting**）：区分的节点将数据分到子节点的过程
+   * 决策节点（**Decision Node**）：存在这样的节点，存在继续被区分的子节点。这样的节点即决策节点
+   * 叶节点/终节点（**Leaf/Terminal Node**）：这样的节点是不可以继续被分割的节点
+   * 剪枝（**Pruning**）：移除决策节点下的子节点的过程，这是一个分割过程的逆过程
+   * 枝/子树（**Branch/Sub-tree**）整个树的子部分
+   * 父节点与子节点（**Parent/Child Node**）
+
+   ![](../img/Decision_Tree_2.png)
