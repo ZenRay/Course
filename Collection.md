@@ -31,3 +31,9 @@
 [Guide to an in-depth understanding of logistic regression](https://www.dataschool.io/guide-to-logistic-regression/) 
 
 链接中给出了很多丰富的资源，不仅包括逻辑回归的相关知识，而且还从实践以及理论文档（[paper by Andrew Ng](http://ai.stanford.edu/~ang/papers/nips01-discriminativegenerative.pdf) ——比较了逻辑回归和朴素贝叶斯性能）
+
+### 机器学习决策树
+
+[A Complete Tutorial on Tree Based Modeling from Scratch (in R & Python)](https://www.analyticsvidhya.com/blog/2016/04/complete-tutorial-tree-based-modeling-scratch-in-python/#thirteen) 
+
+对于理解决策树模型构建以及模型调试的依据，讲解了其他多种多种树模型
