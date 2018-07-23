@@ -1742,6 +1742,730 @@ Adding MyObj(1) + MyObj(2)
 MyObj(3)
 ```
 
+## 4. `contextlib`——上下文管理器工具
+
+作用创建和处理上下文管理器的工具，`contextlib` 模块包含了用于处理上下文管理器的工具以及 `with` 语句
+
+```python
+"AbstractContextManager", "ContextDecorator", "ExitStack", "_GeneratorContextManager", "_RedirectStream", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_collections_abc", "abc", "closing", "contextmanager", "deque", "redirect_stderr", "redirect_stdout", "suppress", "sys", "wraps"
+```
+
+### 4.1 上下文管理器 `API`
+
+上下文管理器要负责一个代码块中的资源，在进入代码块时创建资源，然后在退出代码块时清理资源——这样可以很方便的确保文件在读写完成后关闭文件，下面的示例是使用 `with` 来进行上下文管理
+
+```python
+with open("filename.txt", "wt") as f:
+	f.write("contents go here")
+# 这里的文件会在写入完成后自动关闭
+```
+
+在上下文管理器中，`API` 包括两种方法，主要是 `__enter__` 方法用于返回一个对象，以便上下文被使用。在执行离开时，调用 `__exit__` 方法用于清理所使用的资源。下面的方式是模拟上下文的管理方式
+
+```python
+class Context:
+
+    def __init__(self):
+        print('__init__()')
+
+    def __enter__(self):
+        print('__enter__()')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('__exit__()')
+
+with Context():
+    print('Doing work in the context')
+    
+# output
+__init__()
+__enter__()
+Doing work in the context
+__exit__()
+```
+
+在进行上下文管理中使用了 `as` 进行别名管理，可以在 `__enter__` 方法中返回与这个名称相关联的任何对象。下面的示例中，使用 `do_something` 方法
+
+```python
+class WithinContext:
+
+    def __init__(self, context):
+        print('WithinContext.__init__({})'.format(context))
+
+    def do_something(self):
+        print('WithinContext.do_something()')
+
+    def __del__(self):
+        print('WithinContext.__del__')
+
+
+class Context:
+
+    def __init__(self):
+        print('Context.__init__()')
+
+    def __enter__(self):
+        print('Context.__enter__()')
+        return WithinContext(self)		# 这里演示了使用 __enter__ 将上下文内容传达给其他可以处理的对象，例如函数，这里是类
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('Context.__exit__()')
+
+
+with Context() as c:		# 这里使用了 as 进行变量名管理，c 会得到 __enter__ 方法的上下文，并调用了其中的 WithinContext 类
+    c.do_something()
+    
+# output
+Context.__init__()
+Context.__enter__()
+WithinContext.__init__(<__main__.Context object at 0x101e9c080>)
+WithinContext.do_something()
+Context.__exit__()
+WithinContext.__del__
+```
+
+在 `__exit__` 中，可以接收某些参数，其中包括 `with` 模块中产生的异常的信息。实际运行过程中，如果上下文可以处理这个异常，`__exit__` 方法应当返回一个 `True` 值来只是不需要传播 `with` 块中的异常，否则的话 `__exit__` 会在运行完成后重新跑出这个异常
+
+```python
+class Context:
+
+    def __init__(self, handle_error):
+        print('__init__({})'.format(handle_error))
+        self.handle_error = handle_error
+
+    def __enter__(self):
+        print('__enter__()')
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('__exit__()')
+        print('  exc_type =', exc_type)
+        print('  exc_val  =', exc_val)
+        print('  exc_tb   =', exc_tb)
+        return self.handle_error		# 这里的 False 和 True 在这里被返回，表示了最终处理的结果
+
+
+with Context(True):		# 这里就是传入了一个 True 表示下面的异常可以杯处理，不需要传播异常
+    raise RuntimeError('error message handled')
+
+print()
+
+with Context(False):	# 这里传入的是一个 False 表示异常不被传播，并且将在最后又被抛出
+    raise RuntimeError('error message propagated')
+    
+# output
+__init__(True)
+__enter__()
+__exit__()
+  exc_type = <class 'RuntimeError'>
+  exc_val  = error message handled
+  exc_tb   = <traceback object at 0x1044ea648>
+
+__init__(False)
+__enter__()
+__exit__()
+  exc_type = <class 'RuntimeError'>
+  exc_val  = error message propagated
+  exc_tb   = <traceback object at 0x1044ea648>
+Traceback (most recent call last):
+  File "contextlib_api_error.py", line 34, in <module>
+    raise RuntimeError('error message propagated')
+RuntimeError: error message propagated
+```
+
+### 4.2 作为函数装饰器的上下文管理器
+
+在 `4.1` 中主要是使用了示例来解释上下文管理器的处理文件的方式。 `ContextDecorator` 类提供了常规上下文管理器的类，以达到使用函数装饰器的方法做到上下文的管理器的目的。
+
+```python
+import contextlib
+
+class Context(contextlib.ContextDecorator):		# 这里传入了一个 contextlib 中的 ContextDecorator 类
+
+    def __init__(self, how_used):
+        self.how_used = how_used
+        print('__init__({})'.format(how_used))
+
+    def __enter__(self):
+        print('__enter__({})'.format(self.how_used))
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print('__exit__({})'.format(self.how_used))
+
+
+@Context('as decorator')
+def func(message):
+    print(message)
+
+
+# 下面两个演示了直接调用上下文管理器和以上下文管理器装饰器函数的使用是那个的差异。被装饰器包裹的函数，不能像 with 与 as 语句一样调用 __enter__ 返回的值；另外作为装饰器的的管理器中传入的参数，可以被用于全局中
+print()
+with Context('as context manager'):
+    print('Doing work in the context')
+
+print()
+func('Doing work in the wrapped function')
+
+# output
+__init__(as decorator)		# 这个结果是在做装饰器中的时候 初始化的输出——即 17 行到 19 行的输出
+
+__init__(as context manager)
+__enter__(as context manager)
+Doing work in the context
+__exit__(as context manager)
+
+__enter__(as decorator)
+Doing work in the wrapped function
+__exit__(as decorator)
+```
+
+### 4.3 从生成器到上下文管理器
+
+传统的创建上下文管理器的方法是创建一个 `__enter__` 和 `__exit__` 方法的类。但是在编写代码的时候过多的使用这种方式，会增加代码负担。为了解决这种问题，可以使用 `contextmanager()` 作为装饰器将一个生成器函数转换为上下文管理器
+
+```python
+import contextlib
+
+
+@contextlib.contextmanager
+def make_context():
+    print('  entering')
+    try:
+        yield {}
+    except RuntimeError as err:
+        print('  ERROR:', err)
+    finally:
+        print('  exiting')
+
+# 这里生成器要初始化，用 yield 生成一次值，生成的值会被绑定到 with 语句中的 as 子句中的变量，完成后清理上下文，同样的如果 with 语句代码块处理过程出现异常会根据上下文处理异常的方式处理
+print('Normal:')
+with make_context() as value:
+    print('  inside with statement:', value)
+
+print('\nHandled error:')
+with make_context() as value:
+    raise RuntimeError('showing example of handling an error')
+
+print('\nUnhandled error:')
+with make_context() as value:
+    raise ValueError('this exception is not handled')
+    
+# output
+Normal:
+  entering
+  inside with statement: {}
+  exiting
+
+Handled error:
+  entering
+  ERROR: showing example of handling an error
+  exiting
+
+Unhandled error:
+  entering
+  exiting
+Traceback (most recent call last):
+  File "contextlib_contextmanager.py", line 33, in <module>
+    raise ValueError('this exception is not handled')
+ValueError: this exception is not handled
+```
+
+其中 `contextmanager` 返回的上下文管理器是来源于 `ContextDecorator` ，所以它也可以被用于函数装饰器
+
+```python
+import contextlib
+
+@contextlib.contextmanager
+def make_context():
+    print('  entering')
+    try:
+        # Yield control, but not a value, because any value
+        # yielded is not available when the context manager
+        # is used as a decorator.
+        yield
+    except RuntimeError as err:
+        print('  ERROR:', err)
+    finally:
+        print('  exiting')
+
+
+@make_context()
+def normal():
+    print('  inside with statement')
+
+
+@make_context()
+def throw_error(err):
+    raise err
+
+
+print('Normal:')
+normal()
+
+print('\nHandled error:')
+throw_error(RuntimeError('showing example of handling an error'))
+
+print('\nUnhandled error:')
+throw_error(ValueError('this exception is not handled'))
+
+# 在这里的例子中，同样存在上下文管理器做装饰器和直接使用上下文管理器的差异。此外被装饰的函数，得到的参数是可以被使用的，见 throw_error 得到的参数
+
+# output
+Normal:
+  entering
+  inside with statement
+  exiting
+
+Handled error:
+  entering
+  ERROR: showing example of handling an error
+  exiting
+
+Unhandled error:
+  entering
+  exiting
+Traceback (most recent call last):
+  File "contextlib_contextmanager_decorator.py", line 43, in
+<module>
+    throw_error(ValueError('this exception is not handled'))
+  File ".../lib/python3.6/contextlib.py", line 52, in inner
+    return func(*args, **kwds)
+  File "contextlib_contextmanager_decorator.py", line 33, in
+throw_error
+    raise err
+ValueError: this exception is not handled
+
+```
+
+### 4.3 关闭打开的句柄——`Closing Open Handles`
+
+`file` 类可以直接支持上下文管理器的 `API`，但是某些打开句柄不一定支持这个 `API`。下面演示了使用具有 `close` 方法的类，但是不支持上下文管理器 `API` ，这里可以使用 `closing` 方法来创建一个上下文管理器，来保障句柄最终被关闭：
+
+```python
+import contextlib
+
+
+class Door:
+
+    def __init__(self):
+        print('  __init__()')
+        self.status = 'open'
+
+    def close(self):
+        print('  close()')
+        self.status = 'closed'
+
+
+print('Normal Example:')
+with contextlib.closing(Door()) as door:
+    print('  inside with statement: {}'.format(door.status))
+print('  outside with statement: {}'.format(door.status))
+
+print('\nError handling example:')
+try:
+    with contextlib.closing(Door()) as door:
+        print('  raising from inside with statement')
+        raise RuntimeError('error message')
+except Exception as err:
+    print('  Had an error:', err)
+    
+# output
+Normal Example:
+  __init__()
+  inside with statement: open
+  close()
+  outside with statement: closed
+
+Error handling example:
+  __init__()
+  raising from inside with statement
+  close()
+  Had an error: error message
+```
+
+### 4.4 忽略异常——`Ignoring Exception`
+
+忽略其他 `library` 产生的异常通常是非常有用的，因为这个异常值说明了得到的设计期望，或者结果是可以被或略的异常。常见的是使用 `try/except` 语句的方式，通过在 `except` 中运行 `pass` 来避免。而在 `contextlib` 中可以使用 `suppress` 方法来显性处理 `with` 语句中的异常
+
+```python
+import contextlib
+
+
+class NonFatalError(Exception):
+    pass
+
+
+def non_idempotent_operation():
+    raise NonFatalError(
+        'The operation failed because of existing state'
+    )
+
+# 方式一，使用 suppress 方法来显性控制
+with contextlib.suppress(NonFatalError):
+    print('trying non-idempotent operation')
+    non_idempotent_operation()
+    print('succeeded!')
+
+print('done')
+
+# 方法二，使用 try/except 来控制
+try:
+    print('trying non-idempotent operation')
+    non_idempotent_operation()
+    print('succeeded!')
+except NonFatalError:
+    pass
+    
+# output
+trying non-idempotent operation
+done
+```
+
+### 4.5 重定向输出流——`Redirecting Ouput Streams`
+
+在输出结果中，可以使用不同的参数来配置结果的输出目标，`redicect_stdout` 和 `redirect_stderr` 两个上下文管理器方法，可以用于捕获结果——捕获可以用于没有提供接收新的输出参数的函数的输出。
+
+```python
+from contextlib import redirect_stdout, redirect_stderr
+import io
+import sys
+
+
+def misbehaving_function(a):
+    sys.stdout.write('(stdout) A: {!r}\n'.format(a))
+    sys.stderr.write('(stderr) A: {!r}\n'.format(a))
+
+
+capture = io.StringIO()
+with redirect_stdout(capture), redirect_stderr(capture):
+    misbehaving_function(5)
+
+print(capture.getvalue())
+
+# misbehaving_function() 同时写了 stdout 和 stderr ，不过后面两个上下文管理器都使用了同一个 io.StringIO 实例将其捕获用于之后的使用
+
+# output
+(stdout) A: 5
+(stderr) A: 5
+```
+
+### 4.6 动态上下文管理器栈——`Dynamic Context Manager Stacks`
+
+多数上下文管理只能每次处理一个对象，例如单个文件或者数据库句柄。这些情况中对象都是提前知道的，使用上下文管理器也都可以围绕这个对象展开。不过在另一些情况中，可能需要创建一个未知数量的上下文，同时希望控制流退出上下文时这些上下文管理器也全部执行清理功能。 `ExitStack` 就是用来处理这些动态情况的。
+
+`ExitStack` 实例维护一个包含清理回调的栈。这些回调都会被放在上下文中，任何被注册的回调都会在控制流退出上下文时以倒序方式被调用。这有点像嵌套了多层的 `with` 语句，除了它们是被动态创建的。
+
+#### 4.6.1 栈上下文管理器
+
+`ExitStack` 可以使用多种方法来对栈进行填充，例如 `enter_content` 方法，可以将上下文管理器添加到栈中。它首先会在整个上下文中调用 `__enter__` 方法，之后寄存器（`register` ）中使用 `__exit__` 方法来回调执行栈的后续工作（例如出栈）
+
+```python
+import contextlib
+
+
+@contextlib.contextmanager
+def make_context(i):
+    print('{} entering'.format(i))
+    yield {}
+    print('{} exiting'.format(i))
+
+
+def variable_stack(n, msg):
+    with contextlib.ExitStack() as stack:
+        for i in range(n):
+            stack.enter_context(make_context(i))
+        print(msg)
+
+
+variable_stack(2, 'inside context')
+
+# output
+0 entering
+1 entering
+inside context
+1 exiting
+0 exiting
+```
+
+注意⚠️，在 `python 3.x` 中取消了 `nest` 的嵌套方法，但是可以使用 `ExitStack` 来模拟嵌套。任何发生在上下文中的错误都会交给上下文管理器的正常错误处理系统去处理，下面的示例揭示了上下文管理器类传递错误的方式
+
+```python
+import contextlib
+
+
+class Tracker:
+    "Base class for noisy context managers."
+
+    def __init__(self, i):
+        self.i = i
+
+    def msg(self, s):
+        print('  {}({}): {}'.format(
+            self.__class__.__name__, self.i, s))
+
+    def __enter__(self):
+        self.msg('entering')
+
+
+class HandleError(Tracker):
+    "If an exception is received, treat it as handled."
+
+    def __exit__(self, *exc_details):
+        received_exc = exc_details[1] is not None
+        if received_exc:
+            self.msg('handling exception {!r}'.format(
+                exc_details[1]))
+        self.msg('exiting {}'.format(received_exc))
+        # Return Boolean value indicating whether the exception
+        # was handled.
+        return received_exc
+
+
+class PassError(Tracker):
+    "If an exception is received, propagate it."
+
+    def __exit__(self, *exc_details):
+        received_exc = exc_details[1] is not None
+        if received_exc:
+            self.msg('passing exception {!r}'.format(
+                exc_details[1]))
+        self.msg('exiting')
+        # Return False, indicating any exception was not handled.
+        return False
+
+
+class ErrorOnExit(Tracker):
+    "Cause an exception."
+
+    def __exit__(self, *exc_details):
+        self.msg('throwing error')
+        raise RuntimeError('from {}'.format(self.i))
+
+
+class ErrorOnEnter(Tracker):
+    "Cause an exception."
+
+    def __enter__(self):
+        self.msg('throwing error on enter')
+        raise RuntimeError('from {}'.format(self.i))
+
+    def __exit__(self, *exc_info):
+        self.msg('exiting')
+        
+# 例子中的类会被包含在 variable_stack() 中使用（见上面的代码），variable_stack() 把上下文管理器放到 ExitStack 中使用，逐一建立起上下文。下面的例子我们将传递不同的上下文管理器来测试错误处理结果。首先我们测试无异常的常规情况。
+
+print('No errors:')
+variable_stack([
+    HandleError(1),
+    PassError(2),
+])
+
+# 接下来创建了在栈末的处理异常的例子，这样的话所有已经打开的上下文管理器会随着栈的释放而关闭
+print('\nError at the end of the context stack:')
+variable_stack([
+    HandleError(1),
+    HandleError(2),
+    ErrorOnExit(3),
+])
+
+# 之后，做一个在栈中间处理异常的例子，某些时候直到上下文被关闭，错误才会发生。这样错误对上下文是没有影响的
+print('\nError in the middle of the context stack:')
+variable_stack([
+    HandleError(1),
+    PassError(2),
+    ErrorOnExit(3),
+    HandleError(4),
+])
+
+# 最后创建了一个例子，用于解释未处理的异常以及在被代码调用传播的异常。这里需要注意⚠️，栈中的上下文管理器可以接收一个异常值，同时返回一个 True 值，这样可以避免异常值被传播到其他上下文管理器中
+try:
+    print('\nError ignored:')
+    variable_stack([
+        PassError(1),
+        ErrorOnExit(2),
+    ])
+except RuntimeError:
+    print('error handled outside of context')
+    
+# output
+No errors:
+  HandleError(1): entering
+  PassError(2): entering
+  PassError(2): exiting
+  HandleError(1): exiting False
+  outside of stack, any errors were handled
+
+Error at the end of the context stack:
+  HandleError(1): entering
+  HandleError(2): entering
+  ErrorOnExit(3): entering
+  ErrorOnExit(3): throwing error
+  HandleError(2): handling exception RuntimeError('from 3',)
+  HandleError(2): exiting True
+  HandleError(1): exiting False
+  outside of stack, any errors were handled
+
+Error in the middle of the context stack:
+  HandleError(1): entering
+  PassError(2): entering
+  ErrorOnExit(3): entering
+  HandleError(4): entering
+  HandleError(4): exiting False
+  ErrorOnExit(3): throwing error
+  PassError(2): passing exception RuntimeError('from 3',)
+  PassError(2): exiting
+  HandleError(1): handling exception RuntimeError('from 3',)
+  HandleError(1): exiting True
+  outside of stack, any errors were handled
+
+Error ignored:
+  PassError(1): entering
+  ErrorOnExit(2): entering
+  ErrorOnExit(2): throwing error
+  PassError(1): passing exception RuntimeError('from 2',)
+  PassError(1): exiting
+error handled outside of context
+```
+
+#### 4.6.2 任意上下文回调——`Arbitrary Context Callbacks`
+
+`ExitStack` 也支持任意回调方式来关闭上下文，同样也是为了方便通过上下文的方式来关闭文件
+
+```python
+import contextlib
+
+
+def callback(*args, **kwds):
+    print('closing callback({}, {})'.format(args, kwds))
+
+# 正如使用了上下文管理器的 __exit__ 方法，下面演示了调换顺序后在寄存器中的执行方式
+with contextlib.ExitStack() as stack:
+    stack.callback(callback, 'arg1', 'arg2')
+    stack.callback(callback, arg3='val3')
+    
+# output
+closing callback((), {'arg3': 'val3'})
+closing callback(('arg1', 'arg2'), {})
+
+# 不论错误是否发生以及给定的信息是否有错误发生，回调会被执行。返回值也会被忽略，因为上下文不会访问这些错误，回调不能监督异常会传播到余下的上下文管理器中
+try:
+    with contextlib.ExitStack() as stack:
+        stack.callback(callback, 'arg1', 'arg2')
+        stack.callback(callback, arg3='val3')
+        raise RuntimeError('thrown error')
+except RuntimeError as err:
+    print('ERROR: {}'.format(err))
+    
+# output
+closing callback((), {'arg3': 'val3'})
+closing callback(('arg1', 'arg2'), {})
+ERROR: thrown error
+
+# 回调提供了一种便捷的方式定义清理逻辑而无需创建一个多余的新的上下文管理器类。为了提高可读性，具体逻辑也可以写在内联函数（inline function）中，callback() 也可以作为装饰器使用。把callback() 作为装饰器使用时无法给被注册的函数指定参数。不过，如果清理函数作为内联定义，作用域规则使其可以访问调用代码中被定义的变量
+
+with contextlib.ExitStack() as stack:
+
+    @stack.callback
+    def inline_cleanup():
+        print('inline_cleanup()')
+        print('local_resource = {!r}'.format(local_resource))
+
+    local_resource = 'resource created in context'
+    print('within the context')
+    
+# output
+within the context
+inline_cleanup()
+local_resource = 'resource created in context'
+```
+
+#### 4.6.3 局部栈——`Partial Stack`
+
+如果上下文不能被完全构造出来，有时创建一个复杂的上下文后使用局部栈取消操作是非常有效的。同时为了延迟所有资源的清理，直到最终被一次性清理，这需要被正确设置。举个例子，如果在操作中需要多个长时间的网络连接，如果其中某一连接失效时，最好的方式是不进行这个操作。但如果所有被正确打开的连接需要单个上下文管理器在运行期间保持连接。 `ExitStack` 中的 `pop_all()` 则适用于这种情况。
+
+`pop_all()` 会清理栈中所有的上下文管理器和回调，并返回一个包含与之前的栈相同内容的新栈。 原栈完成操作后，新栈的 `close()` 方法可以在之后执行以清理掉所有资源
+
+```python
+import contextlib
+
+from contextlib_context_managers import *
+
+
+def variable_stack(contexts):
+    with contextlib.ExitStack() as stack:
+        for c in contexts:
+            stack.enter_context(c)
+        # Return the close() method of a new stack as a clean-up
+        # function.
+        return stack.pop_all().close
+    # Explicitly return None, indicating that the ExitStack could
+    # not be initialized cleanly but that cleanup has already
+    # occurred.
+    return None
+
+
+print('No errors:')
+cleaner = variable_stack([
+    HandleError(1),
+    HandleError(2),
+])
+cleaner()
+
+print('\nHandled error building context manager stack:')
+try:
+    cleaner = variable_stack([
+        HandleError(1),
+        ErrorOnEnter(2),
+    ])
+except RuntimeError as err:
+    print('caught error {}'.format(err))
+else:
+    if cleaner is not None:
+        cleaner()
+    else:
+        print('no cleaner returned')
+
+print('\nUnhandled error building context manager stack:')
+try:
+    cleaner = variable_stack([
+        PassError(1),
+        ErrorOnEnter(2),
+    ])
+except RuntimeError as err:
+    print('caught error {}'.format(err))
+else:
+    if cleaner is not None:
+        cleaner()
+    else:
+        print('no cleaner returned')
+        
+# 这里的示例使用了之前定义好的上下文管理器类，差异在于用 ErrorOnEnter 处理 __enter__ 产生的错误，而非使用 __exit__ 方法来处理。在 variable_stack 内部，如果所有的上下文都被传递进去而且没有产生错误， 新的 ExitStack 中的 close 方法将被返回。如果错误被处理了，variable_stack 将返回一个 None，来指明清理工作已完成。如果是错误未被处理，局部栈将被清理，并且错误将被传播
+
+# output
+
+No errors:
+  HandleError(1): entering
+  HandleError(2): entering
+  HandleError(2): exiting False
+  HandleError(1): exiting False
+
+Handled error building context manager stack:
+  HandleError(1): entering
+  ErrorOnEnter(2): throwing error on enter
+  HandleError(1): handling exception RuntimeError('from 2',)
+  HandleError(1): exiting True
+no cleaner returned
+
+Unhandled error building context manager stack:
+  PassError(1): entering
+  ErrorOnEnter(2): throwing error on enter
+  PassError(1): passing exception RuntimeError('from 2',)
+  PassError(1): exiting
+caught error from 2
+```
+
 
 
 
@@ -1815,3 +2539,13 @@ MyObj(3)
 6. [Standard ML - Wikipedia](https://en.wikipedia.org/wiki/Standard_ML) The library for SML.
 
 7. [Standard library documentation for operator](https://docs.python.org/3.6/library/operator.html) 
+
+8. [Inline function - Wikipedia](https://en.wikipedia.org/wiki/Inline_function) 内联函数
+
+9. [PEP 343](https://www.python.org/dev/peps/pep-0343) 描述 `with` 语句
+
+10. [Context Manager Types](https://docs.python.org/library/stdtypes.html#typecontextmanager) 上下文管理器 `API` 描述
+
+11. [With Statement Context Managers](https://docs.python.org/reference/datamodel.html#context-managers) 
+
+12. [Resource management in Python 3.3, or contextlib.ExitStack FTW!](http://www.wefearchange.org/2013/05/resource-management-in-python-33-or.html) Description of using `ExitStack` to deploy safe code from Barry Warsaw.
