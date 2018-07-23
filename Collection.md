@@ -37,3 +37,9 @@
 [A Complete Tutorial on Tree Based Modeling from Scratch (in R & Python)](https://www.analyticsvidhya.com/blog/2016/04/complete-tutorial-tree-based-modeling-scratch-in-python/#thirteen) 
 
 对于理解决策树模型构建以及模型调试的依据，讲解了其他多种多种树模型
+
+### 理解 Q-Q plots
+
+[Understanding Q-Q Plots | University of Virginia Library Research Data Services + Sciences](https://data.library.virginia.edu/understanding-q-q-plots/)
+
+理解这个图非常重要，是分析数据分布情况的图，另外还有一种检验方法，可以用于检验数据是否是正太分布[Kolmogorov-Smirnov 检验](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test) 
