@@ -291,4 +291,54 @@ for i in range(5):
 ## 参考
 
 1. [Floating Point Arithmetic: Issues and Limitations](https://docs.python.org/tutorial/floatingpoint.html) Article from the Python tutorial describing floating point math representation issues.
+
 2. [Wikipedia: Floating Point](https://en.wikipedia.org/wiki/Floating_point) Article on floating point representations and arithmetic.
+
+3. [Standard library documentation for fractions](https://docs.python.org/3.6/library/fractions.html) `fractions` 模块是 `decimal` 模块的另一种方法，在对分数处理的方面可以进行单独的分子和分母进行表示。另外其实例化创建对象时，可以使用字符串
+
+   ```python
+   import fractions
+   
+   for n, d in [(1, 2), (2, 4), (3, 6)]:
+       f = fractions.Fraction(n, d)	# 这是使用分子和分母的表示方法，来表示无理数
+       print('{}/{} = {}'.format(n, d, f))
+       
+   # output
+   1/2 = 1/2
+   2/4 = 1/2
+   3/6 = 1/2
+   
+   # 通过字符串的形式来实例化对象
+   for s in ['1/2', '2/4', '3/6']:
+       f = fractions.Fraction(s)
+       print('{} = {}'.format(s, f))
+       
+   # output
+   1/2 = 1/2
+   2/4 = 1/2
+   3/6 = 1/2
+   
+   # 下面是使用小数进行分子分母拆分处理
+   for s in ['0.5', '1.5', '2.0', '5e-1']:
+       f = fractions.Fraction(s)
+       print('{0:>4} = {1}'.format(s, f))
+       
+   # output
+    0.5 = 1/2
+    1.5 = 3/2
+    2.0 = 2
+   5e-1 = 1/2
+   
+   # 通过浮点点数来进行实例化，而非字符串的话，可能会产生一定的问题——因为浮点数不能被准确表达
+   for v in [0.1, 0.5, 1.5, 2.0]:
+       print('{} = {}'.format(v, fractions.Fraction(v)))
+       
+   # output
+   0.1 = 3602879701896397/36028797018963968	# 这个结果就说明了浮点数表达的问题
+   0.5 = 1/2
+   1.5 = 3/2
+   2.0 = 2
+   
+   ```
+
+   
