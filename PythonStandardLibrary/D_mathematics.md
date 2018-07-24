@@ -492,7 +492,128 @@ for i in range(6):
 5/2 = (0.5, 2.0)
 ```
 
+## 4. `Statistics` 统计学计算
 
+### 4.1 中位数——`median`
+
+中位数有四种不同的计算方法，前三个（`median`, `median_low`, `median_high`）是常用算法的直接版本，使用不同的解决方案来处理具有偶数元素的数据集。`median()` 找到中心值，如果数据集具有偶数个值，则平均两个中间项。`median_low()` 始终从输入数据集返回一个值，使用具有偶数项的数据集的两个中间项中的较低者。`median_high()` 同样地返回两个中间项中的较高者
+
+```python
+from statistics import *
+
+data = [1, 2, 2, 5, 10, 12]
+
+print('median     : {:0.2f}'.format(median(data)))
+print('low        : {:0.2f}'.format(median_low(data)))
+print('high       : {:0.2f}'.format(median_high(data)))
+
+# output
+median     : 3.50
+low        : 2.00
+high       : 5.00
+```
+
+第四种方法，`median_grouped()`，将输入视为连续数据，并通过优先使用提供的间隔宽度找到中值范围，然后使用落在该范围内的数据集中的实际值的位置在该范围内插值来计算 50％ 百分位中值。随着间隔宽度增加，针对相同数据集计算的中值改变了。其技术方式，可以参考 [视频](https://youtu.be/wWenULjri40?t=430) 与 [Median for Discrete and Continuous Frequency Type Data (grouped data) – MathsTips.com](https://www.mathstips.com/median-for-discrete-and-continuous-frequency-type/) 
+
+```python
+data = [10, 20, 30, 40]
+
+print('1: {:0.2f}'.format(median_grouped(data, interval=1)))
+print('2: {:0.2f}'.format(median_grouped(data, interval=2)))
+print('3: {:0.2f}'.format(median_grouped(data, interval=3)))
+
+# output
+1: 29.50
+2: 29.00
+3: 28.50
+    
+# 关于该方法的文档解释
+median_grouped(data, interval=1)
+    Return the 50th percentile (median) of grouped continuous data.
+
+    >>> median_grouped([1, 2, 2, 3, 4, 4, 4, 4, 4, 5])
+    3.7
+    >>> median_grouped([52, 52, 53, 54])
+    52.5
+
+    This calculates the median as the 50th percentile, and should be
+    used when your data is continuous and grouped. In the above example,
+    the values 1, 2, 3, etc. actually represent the midpoint of classes
+    0.5-1.5, 1.5-2.5, 2.5-3.5, etc. The middle value falls somewhere in
+    class 3.5-4.5, and interpolation is used to estimate it.
+
+    Optional argument ``interval`` represents the class interval, and
+    defaults to 1. Changing the class interval naturally will change the
+    interpolated 50th percentile value:
+
+    >>> median_grouped([1, 3, 3, 5, 7], interval=1)
+    3.25
+    >>> median_grouped([1, 3, 3, 5, 7], interval=2)
+    3.5
+
+    This function does not check whether the data points are at least
+    ``interval`` apart.
+```
+
+### 4.2 方差——`Variance`
+
+统计使用两个值来表示一组值相对于均值的分散程度，分别是 `variance` 和 `standard deviation`。on 包括两组用于计算方差和标准差的函数，具体取决于数据集是代表整个总体还是代表总体样本。这个例子使用 `wc` 来计算所有示例程序的输入文件中的行数，然后使用 `pvariance()` 和 `pstdev()` 计算整个总体的方差和标准差，然后再使用 `variance()` 和 `stddev()` 用于计算通过使用找到的每个第二个文件的长度创建的子集的样本方差和标准差。
+
+```python
+from statistics import *
+import subprocess
+
+
+def get_line_lengths():
+    cmd = 'wc -l ../[a-z]*/*.py'
+    out = subprocess.check_output(
+        cmd, shell=True).decode('utf-8')
+    for line in out.splitlines():
+        parts = line.split()
+        if parts[1].strip().lower() == 'total':
+            break
+        nlines = int(parts[0].strip())
+        if not nlines:
+            continue  # skip empty files
+        yield (nlines, parts[1].strip())
+
+
+data = list(get_line_lengths())
+
+lengths = [d[0] for d in data]
+sample = lengths[::2]
+
+print('Basic statistics:')
+print('  count     : {:3d}'.format(len(lengths)))
+print('  min       : {:6.2f}'.format(min(lengths)))
+print('  max       : {:6.2f}'.format(max(lengths)))
+print('  mean      : {:6.2f}'.format(mean(lengths)))
+
+print('\nPopulation variance:')
+print('  pstdev    : {:6.2f}'.format(pstdev(lengths)))
+print('  pvariance : {:6.2f}'.format(pvariance(lengths)))
+
+print('\nEstimated variance for sample:')
+print('  count     : {:3d}'.format(len(sample)))
+print('  stdev     : {:6.2f}'.format(stdev(sample)))
+print('  variance  : {:6.2f}'.format(variance(sample)))
+
+# output
+Basic statistics:
+  count     : 1282
+  min       :   4.00
+  max       : 228.00
+  mean      :  27.78
+
+Population variance:
+  pstdev    :  17.86
+  pvariance : 318.84
+
+Estimated variance for sample:
+  count     : 641
+  stdev     :  16.94
+  variance  : 286.90
+```
 
 ## 参考
 
@@ -553,3 +674,7 @@ for i in range(6):
 6. [PEP 485](https://www.python.org/dev/peps/pep-0485)  “A function for testing approximate equality”
 
 7. [SciPy](http://scipy.org/) Open source libraryes for scientific and mathematical calculations in Python.
+
+8. [mathtips.com: Median for Discrete and Continuous Frequency Type Data (grouped data)](http://www.mathstips.com/statistics/median-for-discrete-and-continuous-frequency-type.html) Discussion of median for continuous data
+
+9. [PEP 450](https://www.python.org/dev/peps/pep-0450) Adding A Statistics Module To The Standard Library
