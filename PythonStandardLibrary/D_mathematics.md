@@ -286,7 +286,140 @@ for i in range(5):
 5  3.8748
 ```
 
+## 2. `Random` ——伪随机数生成器
 
+`random` 模块是基于`Mersenne Twister` 算法提供的一个快速为随机数生成器——它的目的是向蒙特卡洛模拟生成输入，它是一个大周期的近均匀分布的数，以适用于各种类型的应用。
+
+### 2.1 保存状态——`Saving State`
+
+`random` 使用的伪随机算法的内部状态可以保存，并用于控制后续各轮生成的随机数，继续生成随机数之前回复前一个状态，这会减少由之前输入得到的重复的值或值序列的可能性。`getstate` 方法会返回一些数据，以后可以使用 `setstate` 方法利用这些数据重新初始化伪随机数生成器。下面的例子中 `getstate` 方法返回的数据是一个实现细节，所以这个例子用 `pickle` 将数据保存到一个文件中，不过可以把它当作一个黑盒。如果程序开始时这个文件存在，则加载原来的状态并继续。而且每次运行时都会在保存状态之前以及之后生成一些数，以展示恢复状态会导致生成器再次生成同样的值。
+
+```python
+import random
+import os
+import pickle
+
+if os.path.exists('state.dat'):
+    # Restore the previously saved state
+    print('Found state.dat, initializing random module')
+    with open('state.dat', 'rb') as f:
+        state = pickle.load(f)
+    random.setstate(state)
+else:
+    # Use a well-known start state
+    print('No state.dat, seeding')
+    random.seed(1)
+
+# Produce random values
+for i in range(3):
+    print('{:04.3f}'.format(random.random()), end=' ')
+print()
+
+# Save state for next time
+with open('state.dat', 'wb') as f:
+    pickle.dump(random.getstate(), f)
+
+# Produce more random values
+print('\nAfter saving state:')
+for i in range(3):
+    print('{:04.3f}'.format(random.random()), end=' ')
+print()
+
+# output
+No state.dat, seeding
+0.134 0.847 0.764
+
+After saving state:
+0.255 0.495 0.449
+
+# 这是第二次运行的结果
+Found state.dat, initializing random module
+0.255 0.495 0.449
+
+After saving state:
+0.652 0.789 0.094
+```
+
+### 2.2 多个并发生成器
+
+除了模块级函数，`random` 还包括一个 `Random` 类管理多个随机数生成器的内部状态。其他函数都可以作为 `Random` 实例的方法得到，并且各个实例可以单独初始化和使用，而不会与其他示例返回的值相互干扰。如果系统设置了很好的内置随机值种子，不同实例会有唯一的初始状态。如果没有一个好的平台随机值生成器，不同的 实例会使用当前时间作为种子，这样就会生成相同的值。
+
+```python
+import random
+import time
+
+print('Default initializiation:\n')
+
+r1 = random.Random()
+r2 = random.Random()
+
+for i in range(3):
+    print('{:04.3f}  {:04.3f}'.format(r1.random(), r2.random()))
+
+print('\nSame seed:\n')
+
+seed = time.time()
+r1 = random.Random(seed)
+r2 = random.Random(seed)
+
+for i in range(3):
+    print('{:04.3f}  {:04.3f}'.format(r1.random(), r2.random()))
+    
+# output
+0.862  0.390
+0.833  0.624
+0.252  0.080
+
+Same seed:
+
+0.466  0.466
+0.682  0.682
+0.407  0.407
+
+# 另外可以使用系统随机数生成器，需要使用 os.urandom 方法来生成值。下面的方式使用 random 库中 SystemRandom 方法来调用系统随机数生成器。需要注意的是 SystemRandom 产生的序列是不可再生的，因为其随机性来自系统，而非软件状态，所以 seed 和 setstate 方法将不起作用
+print('Default initializiation:\n')
+
+r1 = random.SystemRandom()
+r2 = random.SystemRandom()
+
+for i in range(3):
+    print('{:04.3f}  {:04.3f}'.format(r1.random(), r2.random()))
+
+print('\nSame seed:\n')
+
+seed = time.time()
+r1 = random.SystemRandom(seed)
+r2 = random.SystemRandom(seed)
+
+for i in range(3):
+    print('{:04.3f}  {:04.3f}'.format(r1.random(), r2.random()))
+```
+
+### 2.3 其他分布的随机模拟
+
+`random` 方法生成的值是**均匀分布的**，但是对于特定的情况需要不同的建模。
+
+* 正太分布
+
+  用于非均匀的连续值建模，例如梯度、高度、重量等。`random` 中包括两个函数的可以生成正太分布，分别是  `normalvariate` 和 `gauss` 方法
+
+* 近似分布
+
+  三角分布（**Triangular Distribution**）常被用于 **小样本** 的近似分布（**Approximation distribution**）。三角分布的“曲线”中，低点在已知的最小和最大值，在模式值处有一个高点——主要根据“最接近”的结果来估计，需要由 `triangular` 方法的模式参数来反应。关于三角分布见[Triangular distribution - Wikipedia](https://en.wikipedia.org/wiki/Triangular_distribution) 
+
+* 指数分布
+
+  `expovariate` 方法可以生成一个指数分布，这对于模拟到达或间隔时间值中的泊松过程会非常有用，实际的例子如放射衰变速度或到达 `Web` 服务器的请求。
+
+  其他的观察实例如帕累托分布和幂律分布，在“长尾效应”中很普遍。使用 `paretovariate` 方法模拟资源分配（例如财富分配，音乐家的需求，对博客的关注）
+
+* 角分布
+
+  角分布（**Angular Distribution**），即米塞斯（`von Mises`）分布或圆正太分布用于计算周期值的概率，例如角度、日历日期和时间。可以使用 `vonmisesvariate` 方法生成。
+
+* 大小分布（**Size Distribution**）
+
+  `betavariate` 方法生成 $\beta$ 分布的值，常用于贝叶斯统计和应用，如任务持续时间建模。`gammavariate` 方法生成 $\gamma$ 分布，用于对事物的大小建模，例如等待时间、雨量和计算错误。`weibullvariate` 方法可以生成韦伯分布用于鼓掌分析、工业工程和天气预报。可以描述例子或其他离散对象的大小分布。
 
 ## 参考
 
@@ -338,7 +471,6 @@ for i in range(5):
    0.5 = 1/2
    1.5 = 3/2
    2.0 = 2
-   
    ```
 
-   
+4. [Wikipedia: Mersenne Twister](https://en.wikipedia.org/wiki/Mersenne_twister) Article about the pseudorandom generator algorithm used by Python
