@@ -421,6 +421,79 @@ for i in range(3):
 
   `betavariate` 方法生成 $\beta$ 分布的值，常用于贝叶斯统计和应用，如任务持续时间建模。`gammavariate` 方法生成 $\gamma$ 分布，用于对事物的大小建模，例如等待时间、雨量和计算错误。`weibullvariate` 方法可以生成韦伯分布用于鼓掌分析、工业工程和天气预报。可以描述例子或其他离散对象的大小分布。
 
+## 3. `Math` 数学函数
+
+### 3.1 异常值测试
+
+浮点数计算可能导致两种类型的异常值，第一种是 `INF`，如果以 `double` 形式存储一个浮点数，而它相对于一个有很大绝对值的值溢出，就会出现这个异常值。第二种是发生 `OverflowError` ，即出现栈溢出错误
+
+```python
+import math
+
+print('{:^3} {:6} {:6} {:6}'.format(
+    'e', 'x', 'x**2', 'isinf'))
+print('{:-^3} {:-^6} {:-^6} {:-^6}'.format(
+    '', '', '', ''))
+
+for e in range(0, 201, 20):
+    x = 10.0 ** e
+    y = x * x		# 这里放大了数据，达到 double 都无法存储即出现 INF
+    print('{:3d} {:<6g} {:<6g} {!s:6}'.format(
+        e, x, y, math.isinf(y),
+    ))
+# output
+ e  x      x**2   isinf
+--- ------ ------ ------
+  0 1      1      False
+ 20 1e+20  1e+40  False
+ 40 1e+40  1e+80  False
+ 60 1e+60  1e+120 False
+ 80 1e+80  1e+160 False
+100 1e+100 1e+200 False
+120 1e+120 1e+240 False
+140 1e+140 1e+280 False
+160 1e+160 inf    True
+180 1e+180 inf    True
+200 1e+200 inf    True
+
+# 下面是强制进行一个 OverflowError 演示
+x = 10.0 ** 200
+
+print('x    =', x)
+print('x*x  =', x * x)
+print('x**2 =', end=' ')
+try:
+    print(x ** 2)
+except OverflowError as err:
+    print(err)
+    
+# output
+x    = 1e+200
+x*x  = inf
+x**2 = (34, 'Result too large')
+```
+
+另外在特殊值计算中，无穷大值的除法没有定义，一个数除以无穷大将得到的 `NaN` 。而 `NaN` 是一个特殊的特殊值，它不等于任何值，甚至不等于本身，所以检查 `NaN` 需要使用 `is` 语句或者 `isnan` 方法
+
+### 3.2 浮点数值的其他表示
+
+`modf` 可以对浮点数进行拆分，返回一个元组，其中包括输入的小数部分和整数部分
+
+```python
+for i in range(6):
+    print('{}/2 = {}'.format(i, math.modf(i / 2.0)))
+    
+# output
+0/2 = (0.0, 0.0)
+1/2 = (0.5, 0.0)
+2/2 = (0.0, 1.0)
+3/2 = (0.5, 1.0)
+4/2 = (0.0, 2.0)
+5/2 = (0.5, 2.0)
+```
+
+
+
 ## 参考
 
 1. [Floating Point Arithmetic: Issues and Limitations](https://docs.python.org/tutorial/floatingpoint.html) Article from the Python tutorial describing floating point math representation issues.
@@ -474,3 +547,9 @@ for i in range(3):
    ```
 
 4. [Wikipedia: Mersenne Twister](https://en.wikipedia.org/wiki/Mersenne_twister) Article about the pseudorandom generator algorithm used by Python
+
+5. [IEEE floating point arithmetic in Python](http://www.johndcook.com/blog/2009/07/21/ieee-arithmetic-python/) Blog post by John Cook about how special values arise and are dealt with when doing math in Python.
+
+6. [PEP 485](https://www.python.org/dev/peps/pep-0485)  “A function for testing approximate equality”
+
+7. [SciPy](http://scipy.org/) Open source libraryes for scientific and mathematical calculations in Python.
