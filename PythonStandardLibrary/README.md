@@ -16,4 +16,4 @@
 2. [B_datastructure](B_datastructure.md): 第二章的内容，主要包括了非内置数据结构
 3. [C_algorithms](C_algorithms.md)：第三章的内容，针对高效精巧的实现算法，讲解了对纯过程式编程、面向对象编程和函数式编程三种方式应用
 4. [D_mathematics](D_mathematics.md) 第五章的内容，针对的是数据计算的问题。对于某些已经了解的内容不在作为笔记
-
+5. [E_filesystem](E_filesystem.md) 第六章的内容，针对的文件系统内容，用于处理文件、构建和解析文件名，另外检查文件内容
