@@ -546,6 +546,195 @@ Pattern : fnmatch_*.py
 Regex   : (?s:fnmatch_.*\.py)\Z
 ```
 
+## 4. `tempfile` ——临时文件系统对象
+
+作用是创建临时文件系统对象，可以安全地创建具有唯一名称的临时文件，以防止被试图破坏应用或窃取数据的人猜出。`TemporaryFile` 方法可以打开并返回一个未命名的文件，`NamedTemporaryFile` 方法打开并返回一个命名文件，`mkdtemp` 方法可以创建一个临时目录并返回其目录名。
+
+```python
+"NamedTemporaryFile", "SpooledTemporaryFile", "TMP_MAX", "TemporaryDirectory", "TemporaryFile", "_O_TMPFILE_WORKS", "_Random", "_RandomNameSequence", "_TemporaryFileCloser", "_TemporaryFileWrapper", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_allocate_lock", "_bin_openflags", "_candidate_tempdir_list", "_errno", "_exists", "_functools", "_get_candidate_names", "_get_default_tempdir", "_infer_return_type", "_io", "_mkstemp_inner", "_name_sequence", "_once_lock", "_os", "_sanitize_params", "_shutil", "_stat", "_text_openflags", "_thread", "_warnings", "_weakref", "gettempdir", "gettempdirb", "gettempprefix", "gettempprefixb", "mkdtemp", "mkstemp", "mktemp", "tempdir", "template"
+```
+
+### 4.1 临时文件
+
+如果需要临时文件来存储数据，而且不需要与其他程序共享数据，则可以使用 `TemporaryFile` 方法来创建文件。这个方法会在平台支持的地方创建一个文件，并会立即断开链接。这样其他程序就不可能找到活打开这个文件，因为**文件系统表中没有该文件的引用**。另外此文件调用 `close` 方法还是上下文管理的方式，在文件关闭时都会自动删除
+
+```python
+import os
+import tempfile
+
+print('Building a filename with PID:')
+filename = '/tmp/guess_my_name.{}.txt'.format(os.getpid())
+with open(filename, 'w+b') as temp:
+    print('temp:')
+    print('  {!r}'.format(temp))
+    print('temp.name:')
+    print('  {!r}'.format(temp.name))
+
+# Clean up the temporary file yourself.
+os.remove(filename)
+
+print()
+print('TemporaryFile:')
+with tempfile.TemporaryFile() as temp:
+    print('temp:')
+    print('  {!r}'.format(temp))
+    print('temp.name:')
+    print('  {!r}'.format(temp.name))
+
+# 这个例子展示了采用不同方法创建临时文件的差别，其中使用 TemporaryFile 创建的文件没有名字
+# output
+Building a filename with PID:
+temp:
+  <_io.BufferedRandom name='/tmp/guess_my_name.12151.txt'>
+temp.name:
+  '/tmp/guess_my_name.12151.txt'
+
+TemporaryFile:
+temp:
+  <_io.BufferedRandom name=4>
+temp.name:
+  4
+
+# 另外默认的这种方式的文件时 w+b 的，所有可以进行全平台的读取和写入
+with tempfile.TemporaryFile() as temp:
+    temp.write(b'Some data')
+
+    temp.seek(0)	# 这里需要注意⚠️在读写数据之后，如果需要回转文件句柄，需要使用 seek
+    print(temp.read())
+   
+# output
+b'Some data'
+
+# 另外还可以将文件使用文本模式打开文件，那么需要传入参数 w+t
+with tempfile.TemporaryFile(mode='w+t') as f:
+    f.writelines(['first\n', 'second\n'])
+
+    f.seek(0)
+    for line in f:
+        print(line.rstrip()
+          
+# output
+first
+second
+```
+
+### 4.2 命名文件——`Named Files`
+
+有些时候，需要有一个命名的临时文件，例如对于跨多个进程甚至主机的应用，为文件命名时在应用不同部分之间传递文件的最简单的方法。`NamedTemporaryFile` 方法会创建文件，但不会断开链接，所以会保留其文件名。当然在处理完全之后，文件也会被删除
+
+```python
+import os
+import pathlib
+import tempfile
+
+with tempfile.NamedTemporaryFile() as temp:
+    print('temp:')
+    print('  {!r}'.format(temp))
+    print('temp.name:')
+    print('  {!r}'.format(temp.name))
+
+    f = pathlib.Path(temp.name)
+
+print('Exists after close:', f.exists())
+# output
+temp:
+  <tempfile._TemporaryFileWrapper object at 0x1011b2d30>
+temp.name:
+  '/var/folders/5q/8gk0wq888xlggz008k8dr7180000hg/T/tmps4qh5zde'
+Exists after close: False
+```
+
+### 4.3 缓冲文件——`Spooled Files`
+
+因为临时文件只能保存相对少量的数据，，因此使用 `SpooledTemporaryFile` 可能效率更高，因为它在内容数量超过阈值之前，使用 `io.BytesIO` 或者 `io.StringIO` 将数据保存到内存中。当数据量超过阈值之后，数据将会被写入磁盘保存，与此同时，缓冲池也会被替换为 `TemporaryFile()`。
+
+```python
+import tempfile
+
+with tempfile.SpooledTemporaryFile(max_size=100,
+                                   mode='w+t',
+                                   encoding='utf-8') as temp:
+    print('temp: {!r}'.format(temp))
+
+    for i in range(3):
+        temp.write('This line is repeated over and over.\n')
+        print(temp._rolled, temp._file)
+        
+# 例子中使用了 SpooledTemporaryFile 的私有属性去检测数据何时写入到磁盘。除非调整缓冲区大小，通常是没必要的去检测这个状态
+# output
+temp: <tempfile.SpooledTemporaryFile object at 0x1007b2c88>
+False <_io.StringIO object at 0x1007a3d38>
+False <_io.StringIO object at 0x1007a3d38>
+True <_io.TextIOWrapper name=4 mode='w+t' encoding='utf-8'>
+
+# 显式调用  rollover()  或者  fileno() 方法将数据写入到磁盘。例子中，因为缓冲池容量远大于数据量，除非显式调用 rollover()  否则不会创建文件
+with tempfile.SpooledTemporaryFile(max_size=1000,
+                                   mode='w+t',
+                                   encoding='utf-8') as temp:
+    print('temp: {!r}'.format(temp))
+
+    for i in range(3):
+        temp.write('This line is repeated over and over.\n')
+        print(temp._rolled, temp._file)
+    print('rolling over')
+    temp.rollover()
+    print(temp._rolled, temp._file)
+    
+# output
+temp: <tempfile.SpooledTemporaryFile object at 0x1007b2c88>
+False <_io.StringIO object at 0x1007a3d38>
+False <_io.StringIO object at 0x1007a3d38>
+False <_io.StringIO object at 0x1007a3d38>
+rolling over
+True <_io.TextIOWrapper name=4 mode='w+t' encoding='utf-8'>
+```
+
+### 4.4 临时目录
+
+当需要多个临时文件时，也许使用创建临时目录来打开所有的文件的方式更方便。`TemporaryDirectory` 方法能够创建临时目录。
+
+```python
+import pathlib
+import tempfile
+
+# 上下文管理器生成了目录的名称，然后可以在上下文中使用该名称创建其它文件
+with tempfile.TemporaryDirectory() as directory_name:
+    the_dir = pathlib.Path(directory_name)
+    print(the_dir)
+    a_file = the_dir / 'a_file.txt'
+    a_file.write_text('This file is deleted.')
+
+print('Directory exists after?', the_dir.exists())
+print('Contents after:', list(the_dir.glob('*')))
+
+# output
+/var/folders/5q/8gk0wq888xlggz008k8dr7180000hg/T/tmp_urhiioj
+Directory exists after? False
+Contents after: []
+```
+
+### 4.5 预测名称——`Predicting Names`
+
+虽然生成的临时文件名称中包含可预测部分比起严格匿名文件安全性较低，但可以找到该文件并对其进行检查以用于调试。到目前讲述的所有方法都采用三个参数在一定程度上控制文件名，名称生成规则如下：`dir + prefix + random + suffix`。四个参数中除了 `random` 都可以传递给相应方法用于创建临时文件和目录
+
+```
+import tempfile
+# prefix 和 suffix 以及随机字符串组合起来用于构建文件名称，dir 参数用于新文件创建的位置
+with tempfile.NamedTemporaryFile(suffix='_suffix',
+                                 prefix='prefix_',
+                                 dir='/tmp') as temp:
+    print('temp:')
+    print('  ', temp)
+    print('temp.name:')
+    print('  ', temp.name)
+    
+# output
+temp:
+   <tempfile._TemporaryFileWrapper object at 0x1018b2d68>
+temp.name:
+   /tmp/prefix_q6wd5czl_suffix
+```
+
 
 
 ## 参考
