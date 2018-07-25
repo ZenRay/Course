@@ -735,6 +735,271 @@ temp.name:
    /tmp/prefix_q6wd5czl_suffix
 ```
 
+## 5. `shutil` ——高级文件操作
+
+作用是复制、设置权限等的文件高级操作
+
+```python
+"Error", "ExecError", "ReadError", "RegistryError", "SameFileError", "SpecialFileError", "_ARCHIVE_FORMATS", "_BZ2_SUPPORTED", "_LZMA_SUPPORTED", "_UNPACK_FORMATS", "_ZLIB_SUPPORTED", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_basename", "_check_unpack_options", "_copyxattr", "_destinsrc", "_ensure_directory", "_find_unpack_format", "_get_gid", "_get_uid", "_make_tarball", "_make_zipfile", "_ntuple_diskusage", "_rmtree_safe_fd", "_rmtree_unsafe", "_samefile", "_unpack_tarfile", "_unpack_zipfile", "_use_fd_functions", "chown", "collections", "copy", "copy2", "copyfile", "copyfileobj", "copymode", "copystat", "copytree", "disk_usage", "errno", "fnmatch", "get_archive_formats", "get_terminal_size", "get_unpack_formats", "getgrnam", "getpwnam", "ignore_patterns", "make_archive", "move", "os", "register_archive_format", "register_unpack_format", "rmtree", "stat", "sys", "unpack_archive", "unregister_archive_format", "unregister_unpack_format", "which"
+```
+
+### 5.1 复制文件
+
+`copyfile` 方法是通过将源内容复制到目标文件，这里需要对目标文件有写入权限否则要报 `IOError`，另外对于某些特殊源文件（如 `Unix` 设备节点）是不能使用 `copyfile` 方法复制为新的特殊文件。其实现方式是使用了底层函数 `copyfileobj` ——它的第三个可选参数可以调整读入块的一个缓冲区长度。
+
+```python
+import glob
+import shutil
+
+print('BEFORE:', glob.glob('shutil_copyfile.*'))
+
+shutil.copyfile('shutil_copyfile.py', 'shutil_copyfile.py.copy')
+
+print('AFTER:', glob.glob('shutil_copyfile.*'))
+
+# output
+BEFORE: ['shutil_copyfile.py']
+AFTER: ['shutil_copyfile.py', 'shutil_copyfile.py.copy']
+```
+
+下面的示例是使用底层函数 `copyfileobj`，并且使用了不同的块大小参数来显示结果
+
+```python
+import io
+import os
+import shutil
+import sys
+
+
+class VerboseStringIO(io.StringIO):
+
+    def read(self, n=-1):
+        next = io.StringIO.read(self, n)
+        print('read({}) got {} bytes'.format(n, len(next)))
+        return next
+
+
+lorem_ipsum = '''Lorem ipsum dolor sit amet, consectetuer
+adipiscing elit.  Vestibulum aliquam mollis dolor. Donec
+vulputate nunc ut diam. Ut rutrum mi vel sem. Vestibulum
+ante ipsum.'''
+
+print('Default:')
+input = VerboseStringIO(lorem_ipsum)
+output = io.StringIO()
+shutil.copyfileobj(input, output)
+
+print()
+
+print('All at once:')
+input = VerboseStringIO(lorem_ipsum)
+output = io.StringIO()
+shutil.copyfileobj(input, output, -1)
+
+print()
+
+print('Blocks of 256:')
+input = VerboseStringIO(lorem_ipsum)
+output = io.StringIO()
+shutil.copyfileobj(input, output, 256)
+
+# output
+Default:
+read(16384) got 166 bytes
+read(16384) got 0 bytes
+
+All at once:
+read(-1) got 166 bytes
+read(-1) got 0 bytes
+
+Blocks of 256:
+read(256) got 166 bytes
+read(256) got 0 bytes
+```
+
+另外还有一种复制方式，使用 `copy` 方法的方式和 `Unix` 使用 `cp` 方式相同，而且文件权限可能发生变更。另外 `copy2` 方法会修改元数据例如访问和修改时间
+
+```python
+import glob
+import os
+import shutil
+
+os.mkdir('example')
+print('BEFORE:', glob.glob('example/*'))
+
+shutil.copy('shutil_copy.py', 'example')
+
+print('AFTER :', glob.glob('example/*'))
+
+# output
+BEFORE: []
+AFTER : ['example/shutil_copy.py']
+
+def show_file_info(filename):
+    stat_info = os.stat(filename)
+    print('  Mode    :', oct(stat_info.st_mode))
+    print('  Created :', time.ctime(stat_info.st_ctime))
+    print('  Accessed:', time.ctime(stat_info.st_atime))
+    print('  Modified:', time.ctime(stat_info.st_mtime))
+
+
+os.mkdir('example')
+print('SOURCE:')
+show_file_info('shutil_copy2.py')
+
+shutil.copy2('shutil_copy2.py', 'example')
+
+print('DEST:')
+show_file_info('example/shutil_copy2.py')
+
+# output
+SOURCE:
+  Mode    : 0o100644
+  Created : Wed Dec 28 19:03:12 2016
+  Accessed: Wed Dec 28 19:03:49 2016
+  Modified: Wed Dec 28 19:03:12 2016
+DEST:
+  Mode    : 0o100644
+  Created : Wed Dec 28 19:03:49 2016
+  Accessed: Wed Dec 28 19:03:49 2016
+  Modified: Wed Dec 28 19:03:12 2016
+```
+
+复制文件元数据——默认情况下，Unix 上创建一个新文件的时候，它的权限依赖于当前用户的 umask。为了复制文件权限，使用 `copymode` 方法。另外还有一个 `copystat` 可以复制文件其他权限。
+
+```python
+import os
+import shutil
+import subprocess
+
+with open('file_to_change.txt', 'wt') as f:
+    f.write('content')
+os.chmod('file_to_change.txt', 0o444)
+
+print('BEFORE:', oct(os.stat('file_to_change.txt').st_mode))
+
+shutil.copymode('shutil_copymode.py', 'file_to_change.txt')
+
+print('AFTER :', oct(os.stat('file_to_change.txt').st_mode))
+
+# output
+BEFORE: 0o100444
+AFTER : 0o100644
+    
+# 下面是使用 copystat 复制权限
+import os
+import shutil
+import time
+
+
+def show_file_info(filename):
+    stat_info = os.stat(filename)
+    print('  Mode    :', oct(stat_info.st_mode))
+    print('  Created :', time.ctime(stat_info.st_ctime))
+    print('  Accessed:', time.ctime(stat_info.st_atime))
+    print('  Modified:', time.ctime(stat_info.st_mtime))
+
+
+with open('file_to_change.txt', 'wt') as f:
+    f.write('content')
+os.chmod('file_to_change.txt', 0o444)
+
+print('BEFORE:')
+show_file_info('file_to_change.txt')
+
+shutil.copystat('shutil_copystat.py', 'file_to_change.txt')
+
+print('AFTER:')
+show_file_info('file_to_change.txt')
+
+# output
+BEFORE:
+  Mode    : 0o100444
+  Created : Wed Dec 28 19:03:49 2016
+  Accessed: Wed Dec 28 19:03:49 2016
+  Modified: Wed Dec 28 19:03:49 2016
+AFTER:
+  Mode    : 0o100644
+  Created : Wed Dec 28 19:03:49 2016
+  Accessed: Wed Dec 28 19:03:49 2016
+  Modified: Wed Dec 28 19:03:46 2016
+```
+
+### 5.2 处理目录树
+
+`shutil` 模块提供了三个方法处理目录树。为了复制目录到另一个目标，可以使用 `copytree` 方法 。它递归源目录内容，将每个文件复制到目标目录，要求目标目录必须先存在。`symlinks` 参数控制符号链接是被赋值为链接还是文件。默认情况下时将内容复制到新的文件。如果这个参数是 `true` ，将会在目标目录树中创建新的符号链接。
+
+```python
+import glob
+import pprint
+import shutil
+
+print('BEFORE:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+
+shutil.copytree('../shutil', '/tmp/example')
+
+print('\nAFTER:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+```
+
+`copytree()` 方法接受两个可调用参数控制它的行为。`ignore` 参数在每个目录或者子目录以及目录中内容被复制时调用，它返回一个应该被复制的内容列表。`copy_function` 参数用于在文件实际复制时调用。例子中，`ignore_patterns()` 用于去创建一个忽略方法跳过 Python 源文件。`verbose_copy()` 复制的文件名称然后调用 `copy2()` 复制，它是默认的复制方法
+
+```python
+import glob
+import pprint
+import shutil
+
+
+def verbose_copy(src, dst):
+    print('copying\n {!r}\n to {!r}'.format(src, dst))
+    return shutil.copy2(src, dst)
+
+
+print('BEFORE:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+print()
+
+shutil.copytree(
+    '../shutil', '/tmp/example',
+    copy_function=verbose_copy,
+    ignore=shutil.ignore_patterns('*.py'),
+)
+
+print('\nAFTER:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+```
+
+目录删除需要使用 `rmtree` 方法，错误默认情况下引发为异常，但是如果第二个参数为 `true` 将被忽略，也可以通过第三个参数提供一个错误处理方法。另外可以使用 `move` 方法将一个文件或者目录从一个地方移到另一个地方，类似于 `mv` 明令。
+
+```python
+import glob
+import pprint
+import shutil
+
+print('BEFORE:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+
+shutil.rmtree('/tmp/example')
+
+print('\nAFTER:')
+pprint.pprint(glob.glob('/tmp/example/*'))
+
+# 下面是使用 move 方法
+
+import glob
+import shutil
+
+with open('example.txt', 'wt') as f:
+    f.write('contents')
+
+print('BEFORE: ', glob.glob('example*'))
+
+shutil.move('example.txt', 'example.out')
+
+print('AFTER : ', glob.glob('example*'))
+```
+
 
 
 ## 参考
