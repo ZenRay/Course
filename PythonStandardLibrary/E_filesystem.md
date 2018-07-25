@@ -551,6 +551,19 @@ Regex   : (?s:fnmatch_.*\.py)\Z
 ## 参考
 
 1. [Managing File System Permissions](https://pymotw.com/3/os/index.html#os-stat)  Discussion of `os.stat()` and `os.lstat()`.
+
 2. [glob](https://pymotw.com/3/glob/index.html#module-glob) Unix shell pattern matching for filenames
+
 3. [PEP 428](https://www.python.org/dev/peps/pep-0428) The pathlib module
+
 4. [Pattern Matching Notation](http://www.opengroup.org/onlinepubs/000095399/utilities/xcu_chap02.html#tag_02_13) An explanation of globbing from The Open Group’s Shell Command Language specification.
+
+5. [Standard library documentation for linecache](https://docs.python.org/3.6/library/linecache.html) 
+
+   `linecache` 模块可以从文件或者导入的 `Python` 模块中检索文本行，并保存结果的缓存，使得同一文本的多行读取效率更高。处理 `Python` 源文件时，`linecache` 模块通常用于 `Python` 标准库的其它部分。缓存实现了在内存中保存文件内容（解析为单独的行）。`API` 通过索查询引列表返回请求的行，相比反复读取文件并解析行然后找到所需的内容，这样节省了很多时间。这个方法在查找同一个文件中的多行时尤其有用，，例如为错误报告生成跟踪记录（**traceback**）。
+
+   
+
+   常用的方法是 `getline` ，可以读取特定的行，并且是原生字符串（即空行返回 “\n”），而且使用此方法是对超过文件行值的行数会返回空字符串
+
+    
