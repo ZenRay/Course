@@ -326,6 +326,122 @@ p.unlink()
 print('exists after removing:', p.exists())
 ```
 
+## 2. `glob` ——文件名模式匹配
+
+作用是使用 `UNIX shell`  规则查找与一个模式匹配的文件名，尽管 `glob` 的 `API` 很小，但是这个模块的功能很强大，只要程序需要查找文件系统中的名字与某模式匹配的一组文件，这里的模式可以匹配特定的扩展名、前缀或者中间都有某个共同的字符串——这样可以使用 `glob` 而不用编写特定的代码来扫描目录内容。需要注意，`glob` 模式规则与 `re` 模块使用的正则表达式规则不同，因为 `glob` 模式遵循标准的 `UNIX` 的路径扩展规则——这里只使用几个特殊字符来实现不同的通配符和字符区间；此外模式规则要应用于文件名中的段，另外路径可以是绝对路径和相对路径；`shell` 变量名和波浪线都不会扩展
+
+```python
+"__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_glob0", "_glob1", "_glob2", "_iglob", "_ishidden", "_isrecursive", "_iterdir", "_rlistdir", "escape", "fnmatch", "glob", "glob0", "glob1", "has_magic", "iglob", "magic_check", "magic_check_bytes", "os", "re"
+```
+
+注意⚠️，在 `python 3.x` 中存在一个 `glob2` 模块，两者不是相同的。
+
+需要注意后续需要存在如下的文件结构，如不存在则需先创建。
+
+```python
+dir
+dir/file.txt
+dir/file1.txt
+dir/file2.txt
+dir/filea.txt
+dir/fileb.txt
+dir/file?.txt
+dir/file*.txt
+dir/file[.txt
+dir/subdir
+dir/subdir/subfile.txt
+```
+
+### 2.1 通配符——`Wildcards`
+
+星号（“*“) 匹配一个文件名中的 0 个或多个字符，下面的模式会匹配目录 “dir” 中的所有路径名——包括路径上的文件和目录，但是不会 **递归** 搜索目录，如果需要列出子目录的文件，需要吧子目录包括在模式中。问号（“?”）是另一个通配符，它只会匹配该位置的单个字符
+
+```python
+import glob
+for name in sorted(glob.glob('dir/*')):
+    print(name)
+    
+# output
+dir/file*.txt
+dir/file.txt
+dir/file1.txt
+dir/file2.txt
+dir/file?.txt
+dir/file[.txt
+dir/filea.txt
+dir/fileb.txt
+dir/subdir
+         
+ # 下面的方式是罗列子目录，这里需要注意一下，如果还有另外一个字，子目录则通配符方式会匹配这两个子目录，并包含这两个子目录的文件名
+ print('Named explicitly:')
+for name in sorted(glob.glob('dir/subdir/*')):
+    print('  {}'.format(name))
+
+print('Named with wildcard:')
+for name in sorted(glob.glob('dir/*/*')):
+    print('  {}'.format(name))
+         
+#output
+Named explicitly:
+  dir/subdir/subfile.txt
+Named with wildcard:
+  dir/subdir/subfile.txt
+         
+# 下面是可以通配 file 之后具有一个字符且末尾为 .txt 结尾
+for name in sorted(glob.glob('dir/file?.txt')):
+    print(name)
+         
+# output
+dir/file*.txt
+dir/file1.txt
+dir/file2.txt
+dir/file?.txt
+dir/file[.txt
+dir/filea.txt
+dir/fileb.txt
+```
+
+### 2.2 字符区间——`Character Ranges`
+
+使用区间进行陪陪可以限制范围，比问号匹配范围更小，其中 `[0-9]` 可以使用 `[0123456789]`  表示。
+
+```python
+for name in sorted(glob.glob('dir/*[0-9].*')):
+    print(name)
+    
+# output
+dir/file1.txt
+dir/file2.txt
+```
+
+### 2.3 逃逸元字符——`Escaping Meta-Character`
+
+有时，需要使用特殊元字符来进行匹配，这里就需要使用 `escape` 函数来创建合适的匹配逃逸模式，这样就不会被 `glob` 扩展而是作为特殊字符来解释。
+
+```python
+specials = '?*['
+
+for char in specials:
+    pattern = 'dir/*' + glob.escape(char) + '.txt'
+    print('Searching for: {!r}'.format(pattern))
+    for name in sorted(glob.glob(pattern)):
+        print(name)
+    print()
+    
+# 下面是每个特殊字符来匹配的方式
+# output
+Searching for: 'dir/*[?].txt'
+dir/file?.txt
+
+Searching for: 'dir/*[*].txt'
+dir/file*.txt
+
+Searching for: 'dir/*[[].txt'
+dir/file[.txt
+```
+
+
+
 
 
 ## 参考
@@ -333,3 +449,4 @@ print('exists after removing:', p.exists())
 1. [Managing File System Permissions](https://pymotw.com/3/os/index.html#os-stat)  Discussion of `os.stat()` and `os.lstat()`.
 2. [glob](https://pymotw.com/3/glob/index.html#module-glob) Unix shell pattern matching for filenames
 3. [PEP 428](https://www.python.org/dev/peps/pep-0428) The pathlib module
+4. [Pattern Matching Notation](http://www.opengroup.org/onlinepubs/000095399/utilities/xcu_chap02.html#tag_02_13) An explanation of globbing from The Open Group’s Shell Command Language specification.
