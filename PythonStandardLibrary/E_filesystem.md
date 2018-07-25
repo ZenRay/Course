@@ -440,7 +440,111 @@ Searching for: 'dir/*[[].txt'
 dir/file[.txt
 ```
 
+## 3. `fnmatch`—— `Unix` 风格的 `Glob` 模式匹配
 
+作用是以 `Unix` 方式的进行文件名比较，`fnmatch` 用于比较针对 `Unix shell` 所使用的 `glob-style` 模式的文件名。
+
+```python
+"__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_compile_pattern", "filter", "fnmatch", "fnmatchcase", "functools", "os", "posixpath", "re", "translate"
+```
+
+### 3.1 简单匹配
+
+`fnmatch` 方法将模式与单一文件名进行比较，且返回一个 `bool` 值表示它们是否匹配。比较是否大小写敏感依赖于操作系统是否使用了大小写敏感的文件系统。但是可以强制进行大小写敏感方式比较，而忽略操作系统系统设置，应该使用 `fnmatchcase` 方法
+
+```python
+import fnmatch
+import os
+
+pattern = 'fnmatch_*.py'
+print('Pattern :', pattern)
+print()
+
+files = os.listdir('.')
+for name in sorted(files):
+    print('Filename: {:<25} {}'.format(
+        name, fnmatch.fnmatch(name, pattern)))
+
+# output
+Pattern : fnmatch_*.py
+
+Filename: fnmatch_filter.py         True
+Filename: fnmatch_fnmatch.py        True
+Filename: fnmatch_fnmatchcase.py    True
+Filename: fnmatch_translate.py      True
+Filename: index.rst                 False
+    
+# 下面是进行大小写敏感方式匹配
+pattern = 'FNMATCH_*.PY'
+print('Pattern :', pattern)
+print()
+
+for name in sorted(files):
+    print('Filename: {:<25} {}'.format(
+        name, fnmatch.fnmatchcase(name, pattern)))
+    
+# output
+Pattern : FNMATCH_*.PY
+
+Filename: fnmatch_filter.py         False
+Filename: fnmatch_fnmatch.py        False
+Filename: fnmatch_fnmatchcase.py    False
+Filename: fnmatch_translate.py      False
+Filename: index.rst                 False
+```
+
+### 3.2 筛选——`filtering`
+
+为了检查一个文件名序列，使用 `filter` 方法，它将返回一个匹配模式参数的文件名**列表**。
+
+```python
+import fnmatch
+import os
+import pprint
+
+pattern = 'fnmatch_*.py'
+print('Pattern :', pattern)
+
+files = list(sorted(os.listdir('.')))
+
+print('\nFiles   :')
+pprint.pprint(files)
+
+print('\nMatches :')
+pprint.pprint(fnmatch.filter(files, pattern))
+
+# output
+Pattern : fnmatch_*.py
+
+Files   :
+['fnmatch_filter.py',
+ 'fnmatch_fnmatch.py',
+ 'fnmatch_fnmatchcase.py',
+ 'fnmatch_translate.py',
+ 'index.rst']
+
+Matches :
+['fnmatch_filter.py',
+ 'fnmatch_fnmatch.py',
+ 'fnmatch_fnmatchcase.py',
+ 'fnmatch_translate.py']
+```
+
+### 3.3 翻译模式——`translating pattern`
+
+`fnmatch` 方法将 `glob` 模式转为一个正则表达式，然后使用  `re` 模块比较文件名和模式。`translate` 方法是一个公共的 `API` 用于将 `glob` 模式转换为正则表达式。使用 `translate` 更有效，它将匹配模式转换为可用的正则表达式模式。
+
+```python
+import fnmatch
+
+pattern = 'fnmatch_*.py'
+print('Pattern :', pattern)
+print('Regex   :', fnmatch.translate(pattern))
+
+# output
+Pattern : fnmatch_*.py
+Regex   : (?s:fnmatch_.*\.py)\Z
+```
 
 
 
