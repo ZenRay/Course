@@ -1000,7 +1000,64 @@ shutil.move('example.txt', 'example.out')
 print('AFTER : ', glob.glob('example*'))
 ```
 
+## 6. `mmap`——内存映射文件
 
+建立内存映射文件而不是直接读取内容，建立一个文件的内存映射将使用操作系统虚拟内粗系统直接访问文件系统中的数据，而不使用 `I/O` 方式。这样可以提高性能，因为使用内存映射时，不会对每个访问产生单独系统调用，且不会在缓冲区之间复制数据，这样内核和用户都会直接访问内存。
+
+内存映射文件可以看作是可以修改的字符串或类文件对象，具体情况更具具体需要。内存映射文件支持一般的文件 `API` 方法，例如 `close`, `flush`, `read`, `readline`, `seek`, `tell` 以及 `write`，同时支持字符串的方法。
+
+### 6.1 文件读取
+
+使用 `mmap` 函数可以创建一个内存映射文件，第一个参数是文件描述符，或者来自 `file` 对象的 `fileno` 方法，也可以来自 `os.open()` 方式。第二个参数传入 `mmap()` 的参数是要确定是多大的字节大小去映射的文件内容。如果值是 `0` ，那么代表映射整个文件。如果这个只存超过当前文件，文件将会被扩展。还有一个可选的参数 `access` 在两个平台都是支持的，使用 `ACCESS_READ` 表示只读，`ACCESS_WRITE` 表示直接写（对内存的操作直接写入文件），或者 `ACCESS_COPY` 用于写时复制（内存分配不写入文件）。
+
+```python
+import mmap
+
+# 文件指针会追踪切片操作上次读取的位置。这个例子中，第一次读取之后指针向前移动了 10 字节。在切片操作开始之前，文件指针重置到文件开始处，然后又向前移动了 10 字节。切片操作之后，调用 read(10) 将会得到文件 11-20 字节的内容
+with open('lorem.txt', 'r') as f:
+    with mmap.mmap(f.fileno(), 0,
+                   access=mmap.ACCESS_READ) as m:
+        print('First 10 bytes via read :', m.read(10))
+        print('First 10 bytes via slice:', m[:10])
+        print('2nd   10 bytes via read :', m.read(10))
+```
+
+### 6.2 文件写入
+
+为了设置一个内存映射文件去接受更新，要以模式 `r+` （而不是 `w`）打开然后再进行映射，才能进行添加。然后可以使用任何更新数据的 `API`（`write()`，赋值到切片等方式）。
+
+下一个例子使用了默认的访问模式 `ACCESS_WRITE`，然后通过将值赋给切片的方式修改文件的部分行。
+
+```python
+import mmap
+import shutil
+
+# Copy the example file
+shutil.copyfile('lorem.txt', 'lorem_copy.txt')
+
+word = b'consectetuer'
+reversed = word[::-1]
+print('Looking for    :', word)
+print('Replacing with :', reversed)
+
+# 内存和文件中第一行中间部分的 consectetuer 将被替换为逆序
+with open('lorem_copy.txt', 'r+') as f:
+    with mmap.mmap(f.fileno(), 0) as m:
+        print('Before:\n{}'.format(m.readline().rstrip()))
+        m.seek(0)  # rewind
+
+        loc = m.find(word)
+        m[loc:loc + len(word)] = reversed
+        m.flush()
+
+        m.seek(0)  # rewind
+        print('After :\n{}'.format(m.readline().rstrip()))
+
+        f.seek(0)  # rewind
+        print('File  :\n{}'.format(f.readline().rstrip()))
+```
+
+此外内存映射文件，可以使用正则表达式进行处理字符串。
 
 ## 参考
 
