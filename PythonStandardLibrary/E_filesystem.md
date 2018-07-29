@@ -1059,8 +1059,6 @@ with open('lorem_copy.txt', 'r+') as f:
 
 此外内存映射文件，可以使用正则表达式进行处理字符串。
 
-[TOC]
-
 ## 7. `codecs`——字符串编码和解码
 
 作用在不同的文本装欢中作为编码器和解码器，`codecs` 模块提供了流接口和文件接口来转换数据，通常用于处理 `Unicode` 文本，当然可以处理其他编码来作其他用途。
@@ -2019,7 +2017,102 @@ IncrementalDecoder converted b'ABCdef' to 'abcDEF'
 
 `StreamReader` 和 `StreamWriter` 也需要 `encode()` 和 `decode()` 方法，并且由于他们需要返回与 `Codec` 版本相同的值，因此可以使用多重继承来实现。 
 
- 
+ 8. `IO` ——文本、二进制、原生流 `I/O` 工具
+
+作用是执行文件 `I/O` ，并提供使用类文件 `API` 处理缓冲区的类。`io` 模块实现了类，它是解释器内置的 `open` 方法实现以文件为基础的输入和输出的操作。类按照以将它们重新组合以实现其他目的这种方式进行分解，例如将 `Unicode` 数据写入网络套接字
+
+### 8.1 内存流——`In-memory Streams`
+
+`StringIO`  提供了方便的方法在内存中处理文本，使用的是文件的 `API` （`read()`，`write()`等）。在某些情况下，使用 `StringIO` 构建大型字符串可以比其他字符串连接技术节省性能。内存中的流缓冲对测试也是很有用的，因为写入磁盘上的真实文件可能会降低测试套件（**Test Suite**）的速度。
+
+下面的例子使用 `read` 方法，另外 `readline` 和 `readlines` 方法同样可以使用。`StringIO` 类提供了 `seek` 方法来在缓冲中进行跳转，在进行读取时，因为这个方法的回转非常有用特别是在已经进行向前解析算法时。
+
+```python
+import io
+
+# Writing to a buffer
+output = io.StringIO()
+output.write('This goes into the buffer. ')
+print('And so does this.', file=output)
+
+# Retrieve the value written
+print(output.getvalue())
+
+output.close()  # discard buffer memory
+
+# Initialize a read buffer
+# 这里已经完成的数据读取的初始化 buffer
+input = io.StringIO('Inital value for read buffer')
+
+# Read from the buffer
+print(input.read())
+
+# output
+This goes into the buffer. And so does this.
+
+Inital value for read buffer
+
+# 同样可以对原生子节操作，而不仅仅是 Unicode 文本。这需要使用 BytesIO
+
+# Writing to a buffer
+output = io.BytesIO()
+output.write('This goes into the buffer. '.encode('utf-8'))	# 这里需要注意下文件的写入是使用的子节方式而非使用的字符串方式
+output.write('ÁÇÊ'.encode('utf-8'))
+
+# Retrieve the value written
+print(output.getvalue())
+
+output.close()  # discard buffer memory
+
+# Initialize a read buffer
+input = io.BytesIO(b'Inital value for read buffer')
+
+# Read from the buffer
+print(input.read())
+
+# output
+b'This goes into the buffer. \xc3\x81\xc3\x87\xc3\x8a'
+b'Inital value for read buffer'
+```
+
+### 8. 2 文本数据的字节流包裹——`Wrapping Bytes Steams For Text Data`
+
+套接字之类的原始字节流可以通过以处理字符串编码和解码的方式包装，从而更容易地和文本数据一起使用。`TextIOWrapper` 类支持读写操作。`write_through` 参数禁用缓冲，并立即通过底层的缓冲将所有数据刷新到包裹器（**Wrapper**）中。下面例子使用了一个 `BytesIO` 实例作为流。  `bz2`，`http.server`, 和 `subprocess` 的示例演示了如何使用 `TextIOWrapper` 和其他类型的类文件对象。
+
+```python
+import io
+
+# Writing to a buffer
+output = io.BytesIO()
+wrapper = io.TextIOWrapper(
+    output,
+    encoding='utf-8',
+    write_through=True,
+)
+wrapper.write('This goes into the buffer. ')
+wrapper.write('ÁÇÊ')
+
+# Retrieve the value written
+print(output.getvalue())
+
+output.close()  # discard buffer memory
+
+# Initialize a read buffer
+input = io.BytesIO(
+    b'Inital value for read buffer with unicode characters ' +
+    'ÁÇÊ'.encode('utf-8')
+)
+wrapper = io.TextIOWrapper(input, encoding='utf-8')
+
+# Read from the buffer
+print(wrapper.read())
+
+# output
+b'This goes into the buffer. \xc3\x81\xc3\x87\xc3\x8a'
+Inital value for read buffer with unicode characters ÁÇÊ
+```
+
+
 
 ## 参考
 
@@ -2060,3 +2153,5 @@ IncrementalDecoder converted b'ABCdef' to 'abcDEF'
 15. [Endianness](https://en.wikipedia.org/wiki/Endianness) – Explanation of endianness in Wikipedia.
 
 16. [W3C XML Entity Definitions for Characters](http://www.w3.org/TR/xml-entity-names/) – Specification for XML representations of character references that cannot be represented in an encoding.
+
+17. [Efficient String Concatenation in Python](http://www.skymind.com/~ocrow/python_string/) – Examines various methods of combining strings and their relative merits.
