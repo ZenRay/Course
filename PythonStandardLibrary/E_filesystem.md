@@ -2017,7 +2017,7 @@ IncrementalDecoder converted b'ABCdef' to 'abcDEF'
 
 `StreamReader` 和 `StreamWriter` 也需要 `encode()` 和 `decode()` 方法，并且由于他们需要返回与 `Codec` 版本相同的值，因此可以使用多重继承来实现。 
 
- 8. `IO` ——文本、二进制、原生流 `I/O` 工具
+## 8. `IO` ——文本、二进制、原生流 `I/O` 工具
 
 作用是执行文件 `I/O` ，并提供使用类文件 `API` 处理缓冲区的类。`io` 模块实现了类，它是解释器内置的 `open` 方法实现以文件为基础的输入和输出的操作。类按照以将它们重新组合以实现其他目的这种方式进行分解，例如将 `Unicode` 数据写入网络套接字
 
