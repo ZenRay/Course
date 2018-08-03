@@ -24,6 +24,7 @@
 4. [D_mathematics](D_mathematics.md) 第五章的内容，针对的是数据计算的问题。对于某些已经了解的内容不在作为笔记
 5. [E_filesystem](E_filesystem.md) 第六章的内容，针对的文件系统内容，用于处理文件、构建和解析文件名，另外检查文件内容
 6. [F_datapersistence](F_datapersistence.md) 第七章的内容，针对的数据久存以供长期使用；包括对象的内存中表示和存储格式之间的来回转换、处理转换后数据的存储区
+7. [G_dataarchiving](G_dataarchiving.md) 第八章内容，针对数据压缩和归档
 
 
 
