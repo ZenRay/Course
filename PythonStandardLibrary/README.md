@@ -1,4 +1,10 @@
-# Python 标准库
+**目录**
+
+[TOC]
+
+## 1. 背景
+
+* Python 标准库——**The Python Standard Library By Example**
 
 * Author：Doug Hellmann
 * Version：2012.5
@@ -10,7 +16,7 @@
 
 
 
-### 文件目录
+## 2. 文件目录
 
 1. [A_string](A_string.md)：第一章文本部分内容，主要讲到了可以使用的几个库，其中序列比较可以推广到其他方面
 2. [B_datastructure](B_datastructure.md): 第二章的内容，主要包括了非内置数据结构
@@ -18,3 +24,11 @@
 4. [D_mathematics](D_mathematics.md) 第五章的内容，针对的是数据计算的问题。对于某些已经了解的内容不在作为笔记
 5. [E_filesystem](E_filesystem.md) 第六章的内容，针对的文件系统内容，用于处理文件、构建和解析文件名，另外检查文件内容
 6. [F_datapersistence](F_datapersistence.md) 第七章的内容，针对的数据久存以供长期使用；包括对象的内存中表示和存储格式之间的来回转换、处理转换后数据的存储区
+
+
+
+## 3. 自己挖的坑
+
+1. [sqlite3 — Embedded Relational Database — PyMOTW 3](https://pymotw.com/3/sqlite3/index.html) 
+
+2. [xml.etree.ElementTree — XML Manipulation API — PyMOTW 3](https://pymotw.com/3/xml.etree.ElementTree/index.html)
