@@ -359,6 +359,93 @@ Preserved:
 
 此外，上面的例子全都使用了默认的 shelf 实现。使用 `shelve.open`  方法而非直接使用 `shelf` 实现，这是常见用法，特别是在使用哪种数据库存储数据无关紧要的时候。然而在某些时候，需要关关注数据库格式的时候，通常就会直接使用 `DbfilenameShelf` 或者 `BsdDbShelf` ，甚至通过 `Shelf` 子类来定制化解决相应的问题。
 
+## 3. `dbm` —— `Unix` 键值数据库
+
+作用是 `dbm` 提供了针对 `DBM-style` 、 `string-keyed` 数据库的类似字典的接口。`dbm` 是一个前端 `DBM` 式数据库，这个数据库能利用简单的字符串值作为键来访问包含字符串的记录。其中使用 `whichdb` 方法会识别数据库，并使用合适的模块来打开数据库。它被用作 `shelve` 的后端，`shelf` 使用 `pickle` 将对象存储在一个 `DBM` 数据库中。
+
+```python
+"__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__path__", "__spec__", "_defaultmod", "_modules", "_names", "error", "io", "ndbm", "open", "os", "struct", "sys", "whichdb"
+```
+
+### 3.1 数据库类型
+
+`Python` 提供了多个模块来访问 `DBM` 数据库，默认的实现取决于当前系统上可用的库以及 编译 `Python` 时使用选项。与特定实现分离的接口允许 `Python` 程序与其他语言的程序交换数据，且不会自动在可用格式之间切换，也可编写在多个平台上运行的便携式数据文件。
+
+#### 3.1.1 `dbm.gnu`
+
+`dbm.gnu` 是来自 `GNU` 项目中 `dbm` 库版本的接口。 它实现方式与这里描述的其他 `DBM` 相同，但在 `open` 方法中提供的 `flags`标志进行了一些更改。除了标准的 `'r'`, `'w'`, `'c'`, `'n'` 标志， `dbm.gnu.open()` 还提供了：
+
+* `'f'` 表示使用 **fast** 模式打开数据库。这种模式下，写入数据库不是同步的
+* `'s'` 表示使用 **synchronized** 模式打开数据库。这种模式下，对数据库所做的更改会立即写入文件，而不是在数据库关闭或其他同步操作时进行延迟写入
+* `'u'` 表示不加锁地打开数据库
+
+#### 3.1.2 `dbm.ndbm`
+
+`dbm.ndbm` 模块提供了一个接口来 `Unix` 上 `ndbm` 方式的执行 `dbm` 格式，它依赖于在编译期间模块的配置。模块的 `library` 属性会识别出 `configure` 库的名称然后确认出扩展模块是什么时候进行编译的。
+
+#### 3.1.3 `dbm.dump`
+
+当没有其他实现可用时， `dbm.dumb` 模块为 `DBM` 的 `API` 提供了一个可移植的后备实现。 使用 `dbm.dumb` 不需要外部依赖，但比其他大多数实现要慢。
+
+### 3.2 创建一个新数据库
+
+新数据库的存储格式，会按照下面的顺序查找：
+
+1. `dbm.gnu`
+2. `dbm.ndbm`
+3. `dbm.dump`
+
+`open` 函数可以接收一些标志来控制如何管理数据库文件。必要时，创建一个新的数据库，可以用 `‘c’`，而使用 `‘n’` 则会创建一个新数据库而覆盖现有的文件
+
+```python
+# dbm_new.py
+import dbm
+
+with dbm.open('/tmp/example.db', 'n') as db:
+    db['key'] = 'value'
+    db['today'] = 'Sunday'
+    db['author'] = 'Doug'
+    
+# 上面的脚本使文件总会重新初始化
+```
+
+使用 `whichdb`  方法可以报告数据库创建的类型
+
+```python
+import dbm
+
+print(dbm.whichdb('/tmp/example.db'))
+
+# 这里的数据库依赖上面的数据库建立
+# output
+dbm.ndbm
+```
+
+### 3.3 打开现有数据库
+
+要打开现有数据库，需要使用 `‘r’` 或者 `‘w’` 标志，这样会把现有数据库自动传给 `whichdb` 识别，因此只要一个文件可以识别，就会使用一个适当的模式来打开这个文件。一旦打开了文件，`db` 是一个类字典对象，并支持所有常用的方法。
+
+```python
+import dbm
+
+with dbm.open('/tmp/example.db', 'r') as db:
+    print('keys():', db.keys())
+    for k in db.keys():
+        print('iterating:', k, db[k])
+    print('db["author"] =', db['author'])
+    
+# output
+keys(): [b'key', b'today', b'author']
+iterating: b'key' b'value'
+iterating: b'today' b'Sunday'
+iterating: b'author' b'Doug'
+db["author"] = b'Doug'
+```
+
+在该数据库中，需要注意⚠️ 键只能是字符串，而值只能是字符串或者 `None`
+
+>  
+
 
 
 ## 参考
@@ -370,3 +457,7 @@ Preserved:
 2. [Pickle: An interesting stack language.](http://peadrop.com/blog/2007/06/18/pickle-an-interesting-stack-language/) – by Alexandre Vassalotti
 
 3. [**PEP 3154**](https://www.python.org/dev/peps/pep-3154) – Pickle protocol version 4
+
+4. [feedcache](https://bitbucket.org/dhellmann/feedcache) -  `feedcache` 模块使用 `shelve` 做为默认的存储选项。
+
+5. [shove](http://pypi.python.org/pypi/shove/) - Shove 使用更多的后端格式来实现类似的 API 。
