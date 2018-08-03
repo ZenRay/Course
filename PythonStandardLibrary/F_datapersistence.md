@@ -252,6 +252,113 @@ __setstate__(State({'name': 'name here'}))
 After: MyClass('name here') (computed='ereh eman')
 ```
 
+## 2. `shelve` ——对象的持久存储
+
+`shelve` 模块使用一种类字典的 `API`，可以持久存储可 `pickle` 的任意 `Python` 对象，对不需要关系数据库时，该模块特别有用。
+
+```python
+"BsdDbShelf", "BytesIO", "DbfilenameShelf", "Pickler", "Shelf", "Unpickler", "_ClosedDict", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "collections", "open"
+```
+
+### 2.1 创建一个新的 `shelf`
+
+最简单的使用 `shelve` 模块的方式是通过 `DbfilenameShelf` 类—— 该类使用 `dbm` 来存储数据。你可以直接使用该类，或者调用 `shelve.open()` 方法。
+
+```python
+import shelve
+
+with shelve.open('test_shelf.db') as s:
+    s['key1'] = {
+        'int': 10,
+        'float': 9.5,
+        'string': 'Sample data',
+    }
+    
+# 再次访问数据，打开 shelf 并且像字典一样使用它
+with shelve.open('test_shelf.db') as s:
+    existing = s['key1']
+
+print(existing)
+
+# output
+{'int': 10, 'float': 9.5, 'string': 'Sample data'}
+```
+
+`dbm`模块不支持多个应用同时写入同一数据库。如果你确定客户端不会修改 `shelf`， 请传入 `flag='r'` 来指定 `shelve` 以只读方式打开数据库。当数据库以只读方式打开时，使用者又尝试着更改数据库，这将引起一个访问出错的异常。这一异常类型依赖于在创建数据库时被 `dbm`选择的数据库模块。
+
+```python
+import shelve
+
+with shelve.open('test_shelf.db', flag='r') as s:
+    print('Existing:', s['key1'])
+    try:
+        s['key1'] = 'new value'
+    except dbm.error as err:
+        print('ERROR: {}'.format(err))
+        
+# output
+Existing: {'int': 10, 'float': 9.5, 'string': 'Sample data'}
+ERROR: cannot add item to database
+```
+
+### 2.2 写回——`write back`
+
+默认情况下，`shelf` 不会跟踪可变对象的修改，这样如果存储在 `shelf` 中的一个元素内容有变化，`shelf` 必须通过再次存储整个元素来显式更新。下面的例子中， `key1` 中存在变化但是并没有被存储，所以重新打开 `shelf` 时，修改并没有体现。
+
+```python
+import shelve
+
+with shelve.open('test_shelf.db') as s:
+    print(s['key1'])
+    s['key1']['new_value'] = 'this was not here before'
+
+with shelve.open('test_shelf.db', writeback=True) as s:
+    print(s['key1'])
+    
+# output
+{'int': 10, 'float': 9.5, 'string': 'Sample data'}
+{'int': 10, 'float': 9.5, 'string': 'Sample data'}
+```
+
+对于 `shelf` 中存储的可变对象，为了自动捕获其修改，打开 `shelf` 时可以启动写回，需要启动协会标志使得 `shelf` 使用内存中缓存记住从数据库获取的所有对象。`shelf` 关闭时每个缓存对象也写回到数据库。⚠️需要开启协会标志。
+
+```python
+import shelve
+import pprint
+
+with shelve.open('test_shelf.db', writeback=True) as s:
+    print('Initial data:')
+    pprint.pprint(s['key1'])
+
+    s['key1']['new_value'] = 'this was not here before'
+    print('\nModified:')
+    pprint.pprint(s['key1'])
+
+with shelve.open('test_shelf.db', writeback=True) as s:
+    print('\nPreserved:')
+    pprint.pprint(s['key1'])
+    
+# output
+Initial data:
+{'float': 9.5, 'int': 10, 'string': 'Sample data'}
+
+Modified:
+{'float': 9.5,
+ 'int': 10,
+ 'new_value': 'this was not here before',
+ 'string': 'Sample data'}
+
+Preserved:
+{'float': 9.5,
+ 'int': 10,
+ 'new_value': 'this was not here before',
+ 'string': 'Sample data'}
+```
+
+尽管这样会减少程序员犯错的机会，并且能够使对象持久存储特命，但是并非所有情况下都需要使用写回模式。打开 `shelf` 时使用缓存也会消耗额外的内存，它关闭时也会暂停其他各个缓存对象写回到数据库，这样就会使应用 **速度变慢**。所有缓存的对象都要写回数据库，因为 **区分它们是否有修改**。如果应用读取的数据对于写的数据，写回会影响性能并且没有太大的意义。
+
+此外，上面的例子全都使用了默认的 shelf 实现。使用 `shelve.open`  方法而非直接使用 `shelf` 实现，这是常见用法，特别是在使用哪种数据库存储数据无关紧要的时候。然而在某些时候，需要关关注数据库格式的时候，通常就会直接使用 `DbfilenameShelf` 或者 `BsdDbShelf` ，甚至通过 `Shelf` 子类来定制化解决相应的问题。
+
 
 
 ## 参考
