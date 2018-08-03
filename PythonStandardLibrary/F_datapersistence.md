@@ -444,7 +444,440 @@ db["author"] = b'Doug'
 
 在该数据库中，需要注意⚠️ 键只能是字符串，而值只能是字符串或者 `None`
 
->  
+## 4. `csv` ——逗号分隔值文件
+
+作用是读写逗号分隔值文件，`csv` 模块可以处理从电子表格和数据库导出的数据，并写入采用字段和子路格式的文本文件，这种格式通常称为逗号分隔值格式（**Comma-Separated Value Format**），因为常使用逗号分隔记录中字段。
+
+```python
+"Dialect", "DictReader", "DictWriter", "Error", "OrderedDict", "QUOTE_ALL", "QUOTE_MINIMAL", "QUOTE_NONE", "QUOTE_NONNUMERIC", "Sniffer", "StringIO", "_Dialect", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "__version__", "excel", "excel_tab", "field_size_limit", "get_dialect", "list_dialects", "re", "reader", "register_dialect", "unix_dialect", "unregister_dialect", "writer"
+```
+
+### 4.1 读取文件
+
+可以使用 `reader` 类来创建一个对象用于读取来自于 `CSV` 文件的数据，这对象会以按照文件顺序的方式进行迭代读取行数据。下面的例子中 `reader` 方法的第一个参数是文本行源，这里是一个文件——但是也可以使用任何可迭代对象（例如 `StringIO` 实例，`list` 等）。其他可选参数，可以用来控制如何解析输入数据。
+
+```python
+# 下面是 csv 文件 —— testdata.csv
+"Title 1","Title 2","Title 3","Title 4"
+1,"a",08/18/07,"å"
+2,"b",08/19/07,"∫"
+3,"c",08/20/07,"ç"
+
+# csv_reader.py
+import csv
+import sys
+
+with open(sys.argv[1], 'rt') as f:
+    reader = csv.reader(f)
+    for row in reader:
+        print(row)
+        
+# output
+$ python3 csv_reader.py testdata.csv
+['Title 1', 'Title 2', 'Title 3', 'Title 4']
+['1', 'a', '08/18/07', 'å']
+['2', 'b', '08/19/07', '∫']
+['3', 'c', '08/20/07', 'ç']
+```
+
+需要注意⚠️解析器会处理嵌在字符串中的换行符，正式因为这个原因，这里的 “行” 并非等同于文件的输入行——这需要根据解析器的判断
+
+```python
+# 下面是 csv 文件 —— testlinebreak.csv
+"Title 1","Title 2","Title 3"
+1,"first line
+second line",08/18/07
+
+# output
+$ python3 csv_reader.py testlinebreak.csv
+
+['Title 1', 'Title 2', 'Title 3']
+['1', 'first line\nsecond line', '08/18/07']
+```
+
+### 4.2 写文件
+
+写 `CSV` 文件和读 `CSV` 文件同样简单，需要使用 `writer` 类来创建一个对象写数据，然后使用 `writerow` 方法迭代地将数据内容写入文件。下面的例子中输出和阅读器实例中使用的导出数据看起来是有差异的，这是因为这些值缺乏引号以及没有表格化输出。
+
+```python
+# csv_writer.py
+import csv
+import sys
+
+unicode_chars = 'å∫ç'
+
+with open(sys.argv[1], 'wt') as f:
+    writer = csv.writer(f)
+    writer.writerow(('Title 1', 'Title 2', 'Title 3', 'Title 4'))
+    for i in range(3):
+        row = (
+            i + 1,
+            chr(ord('a') + i),
+            '08/{:02d}/07'.format(i + 1),
+            unicode_chars[i],
+        )
+        writer.writerow(row)
+
+print(open(sys.argv[1], 'rt').read())
+
+# output
+$ python3 csv_writer.py testout.csv
+
+Title 1,Title 2,Title 3,Title 4
+1,a,08/01/07,å
+2,b,08/02/07,∫
+3,c,08/03/07,ç
+```
+
+### 4.3 引号
+
+需要注意⚠️，写入数据的时候，默认的引号行为有所不同，所以前例中有些数据列没有添加引号。如果需要添加引号，那么需要将 `quoting` 参数设置为另外某种引号模式。下例中， `QUOTE_NONNUMERIC` 会在所有非数值内容的列的周围添加引号
+
+```python
+# csv_writer_quoted.py
+import csv
+import sys
+
+unicode_chars = 'å∫ç'
+
+with open(sys.argv[1], 'wt') as f:
+    writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)	# 这里使用了不同的参数
+    writer.writerow(('Title 1', 'Title 2', 'Title 3', 'Title 4'))
+    for i in range(3):
+        row = (
+            i + 1,
+            chr(ord('a') + i),
+            '08/{:02d}/07'.format(i + 1),
+            unicode_chars[i],
+        )
+        writer.writerow(row)
+
+print(open(sys.argv[1], 'rt').read())
+
+# output
+$ python3 csv_writer_quoted.py testout_quoted.csv
+
+"Title 1","Title 2","Title 3","Title 4"
+1,"a","08/01/07","å"
+2,"b","08/02/07","∫"
+3,"c","08/03/07","ç"
+```
+
+另外还有其他 `quoting` 参数可选，在 `csv` 模块中定了 4 中常量：
+
+- `QUOTE_ALL`：不论什么类型，统一加引号
+- `QUOTE_MINIMAL`：对包含特殊字符的字段加引号，这里的特殊字符指对于一个用相同方言和选项配置的解析器，可能会造成混淆的字符。这个选项是默认值
+- `QUOTE_NONNUMERIC`：对所有非整数或浮点数的字段添加引号。在进行阅读时，不加引号的字段会转换为浮点数
+- `QUOTE_NONE`：输出所有内容都不加引号。在进行阅读时，引号字符包含在字段值中（正常情况下，它们会处理为定界符并去除）
+
+### 4.4 方言——`dialect`
+
+逗号分隔值文件没有明确定义的标准，所以解析器必须很灵活。这种灵活性意味着可以使用很多参数去控制 `csv`如何解析或给写入数据。并不是将各个参数单独传入阅读和写入对象，就可以将它们组在一起构成一个方言（**dialect**）对象。
+
+`Dialect` 类可以通过名字注册，因此 `csv` 模块调用它时不必预先知道相关的参数设置。可以通过 `list_dialects` 方法获取完整的方言列表。
+
+```python
+import csv
+
+print(csv.list_dialects())
+
+# output
+['excel', 'excel-tab', 'unix']
+```
+
+标准库中包括了三种方言， `‘excel’`, `‘excel-tab’`, `‘unix’`。第一个方言用于处理 `Excel` 导出的默认格式文件数据，以及[`LibreOffice`](http://www.libreoffice.org/) 格式文件数据。而 `unix` 方言是针对所有字段都是使用引号，同时使用 `\n` 来分隔记录。
+
+#### 4.4.1 创建方言
+
+可以不使用逗号来分隔字段，输入文件可以使用竖线（’|’）。这需要适当的定界符来注册一个新方言——需要使用 `register_dialect` 方法。下面的例子注册了一个方言，并且可以像逗号定界文件一样读取文件，这里使用的 `pipes` 方言
+
+```python
+# 下面是竖线分隔文件—— testdata.pipes
+"Title 1"|"Title 2"|"Title 3"
+1|"first line
+second line"|08/18/07
+
+# csv_dialect.py
+import csv
+
+csv.register_dialect('pipes', delimiter='|')
+
+with open('testdata.pipes', 'r') as f:
+    reader = csv.reader(f, dialect='pipes')
+    for row in reader:
+        print(row)
+        
+# output
+['Title 1', 'Title 2', 'Title 3']
+['1', 'first line\nsecond line', '08/18/07']
+```
+
+#### 4.4.2 方言参数
+
+方言制定了解析或写入一个数据文件时使用的所有记号（**token**）。下面的表中列出了可以指定的文件格式的各个方面，例如从如何队列定界到使用哪个字符来转义一个记号等内容。同时在示例中显示了采用多种不同的方言时相同的数据会如何显示
+
+```python
+import csv
+import sys
+
+csv.register_dialect('escaped',
+                     escapechar='\\',
+                     doublequote=False,
+                     quoting=csv.QUOTE_NONE,
+                     )
+csv.register_dialect('singlequote',
+                     quotechar="'",
+                     quoting=csv.QUOTE_ALL,
+                     )
+
+quoting_modes = {
+    getattr(csv, n): n
+    for n in dir(csv)
+    if n.startswith('QUOTE_')
+}
+
+TEMPLATE = '''\
+Dialect: "{name}"
+
+  delimiter   = {dl!r:<6}    skipinitialspace = {si!r}
+  doublequote = {dq!r:<6}    quoting          = {qu}
+  quotechar   = {qc!r:<6}    lineterminator   = {lt!r}
+  escapechar  = {ec!r:<6}
+'''
+
+for name in sorted(csv.list_dialects()):
+    dialect = csv.get_dialect(name)
+
+    print(TEMPLATE.format(
+        name=name,
+        dl=dialect.delimiter,
+        si=dialect.skipinitialspace,
+        dq=dialect.doublequote,
+        qu=quoting_modes[dialect.quoting],
+        qc=dialect.quotechar,
+        lt=dialect.lineterminator,
+        ec=dialect.escapechar,
+    ))
+
+    writer = csv.writer(sys.stdout, dialect=dialect)
+    writer.writerow(
+        ('col1', 1, '10/01/2010',
+         'Special chars: " \' {} to parse'.format(
+             dialect.delimiter))
+    )
+    print()
+    
+    
+# output
+Dialect: "escaped"
+
+  delimiter   = ','       skipinitialspace = 0
+  doublequote = 0         quoting          = QUOTE_NONE
+  quotechar   = '"'       lineterminator   = '\r\n'
+  escapechar  = '\\'
+
+col1,1,10/01/2010,Special chars: \" ' \, to parse
+
+Dialect: "excel"
+
+  delimiter   = ','       skipinitialspace = 0
+  doublequote = 1         quoting          = QUOTE_MINIMAL
+  quotechar   = '"'       lineterminator   = '\r\n'
+  escapechar  = None
+
+col1,1,10/01/2010,"Special chars: "" ' , to parse"
+
+Dialect: "excel-tab"
+
+  delimiter   = '\t'      skipinitialspace = 0
+  doublequote = 1         quoting          = QUOTE_MINIMAL
+  quotechar   = '"'       lineterminator   = '\r\n'
+  escapechar  = None
+
+col1    1       10/01/2010      "Special chars: "" '     to parse"
+
+Dialect: "singlequote"
+
+  delimiter   = ','       skipinitialspace = 0
+  doublequote = 1         quoting          = QUOTE_ALL
+  quotechar   = "'"       lineterminator   = '\r\n'
+  escapechar  = None
+
+'col1','1','10/01/2010','Special chars: " '' , to parse'
+
+Dialect: "unix"
+
+  delimiter   = ','       skipinitialspace = 0
+  doublequote = 1         quoting          = QUOTE_ALL
+  quotechar   = '"'       lineterminator   = '\n'
+  escapechar  = None
+
+"col1","1","10/01/2010","Special chars: "" ' , to parse"
+```
+
+下面是方言参数列表：
+
+| 属性               | 默认值         | 含义                               |
+| ------------------ | -------------- | ---------------------------------- |
+| `delimiter`        | `,`            | 字段分隔符，一个字符               |
+| `doublequote`      | `True`         | 控制 quotechar 实例是否成对        |
+| `escapechar`       | `None`         | 指示一个转义序列                   |
+| `lineterminator`   | `\n\r`         | 使用资格字符串结束一行             |
+| `quotechar`        | `“`            | 用来包围特殊值的字段，也是一个字符 |
+| `quoting`          | `QUOTE_MINMAL` | 控制前面介绍的引号行为             |
+| `skipinitialspace` | `False`        | 忽略字段界定符后面的空白符         |
+
+#### 4.4.3 自动检测方言
+
+要配置方言来解析一个输入文件，最好的方式是提前知道正确的设置。对于方言参数列表未知的参数，可以用 `Sniffer` 类来做一个有根据的推测，其中 `sniffer` 方法取一个输入数据样本和一个可选参数（给出可能的定界符）。下面的例子 `sniffer` 方法会返回一个 `Dialect` 实例，其中包含用于解析数据的设置，这个结果可能并不完美，实例中的 `“escaped”` 方言说明了这个问题。
+
+```python
+# csv_dialect_sniffer.py
+import csv
+from io import StringIO
+import textwrap
+
+csv.register_dialect('escaped',
+                     escapechar='\\',
+                     doublequote=False,
+                     quoting=csv.QUOTE_NONE)
+csv.register_dialect('singlequote',
+                     quotechar="'",
+                     quoting=csv.QUOTE_ALL)
+
+# Generate sample data for all known dialects
+samples = []
+for name in sorted(csv.list_dialects()):
+    buffer = StringIO()
+    dialect = csv.get_dialect(name)
+    writer = csv.writer(buffer, dialect=dialect)
+    writer.writerow(
+        ('col1', 1, '10/01/2010',
+         'Special chars " \' {} to parse'.format(
+             dialect.delimiter))
+    )
+    samples.append((name, dialect, buffer.getvalue()))
+
+# Guess the dialect for a given sample, and then use the results
+# to parse the data.
+sniffer = csv.Sniffer()			# 这里生成一个 sniffer 实例
+for name, expected, sample in samples:
+    print('Dialect: "{}"'.format(name))
+    print('In: {}'.format(sample.rstrip()))
+    dialect = sniffer.sniff(sample, delimiters=',\t')
+    reader = csv.reader(StringIO(sample), dialect=dialect)
+    print('Parsed:\n  {}\n'.format(
+          '\n  '.join(repr(r) for r in next(reader))))
+          
+# output
+$ python3 csv_dialect_sniffer.py
+
+Dialect: "escaped"
+In: col1,1,10/01/2010,Special chars \" ' \, to parse
+Parsed:
+  'col1'
+  '1'
+  '10/01/2010'
+  'Special chars \\" \' \\'
+  ' to parse'
+
+Dialect: "excel"
+In: col1,1,10/01/2010,"Special chars "" ' , to parse"
+Parsed:
+  'col1'
+  '1'
+  '10/01/2010'
+  'Special chars " \' , to parse'
+
+Dialect: "excel-tab"
+In: col1        1       10/01/2010      "Special chars "" '      to parse"
+Parsed:
+  'col1'
+  '1'
+  '10/01/2010'
+  'Special chars " \' \t to parse'
+
+Dialect: "singlequote"
+In: 'col1','1','10/01/2010','Special chars " '' , to parse'
+Parsed:
+  'col1'
+  '1'
+  '10/01/2010'
+  'Special chars " \' , to parse'
+
+Dialect: "unix"
+In: "col1","1","10/01/2010","Special chars "" ' , to parse"
+Parsed:
+  'col1'
+  '1'
+  '10/01/2010'
+  'Special chars " \' , to parse'
+```
+
+#### 4.4.4 使用字段名
+
+除了处理数据学列， `csv` 模块还包括一些类，可以将行作为字典来处理，从而可以对字段命名。`DictReader` 和 `DictWriter` 类将行转换为字典而不是列表。字典的键可以传入，也可以由输入的第一行推导得出。基于字典的读取对象和写入对象会实现为基于序列的类的包装器，它们使用相同的方法和参数，两者的差别在与读取对象会将行作为有序字典（**OrderedDcit**）返回，而非元组或列表。
+
+首先是使用读取方式：
+
+```
+import csv
+import sys
+
+with open(sys.argv[1], 'rt') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        print(row)
+        
+# output
+$ python3 csv_dictreader.py testdata.csv
+
+OrderedDict([('Title 1', '1'), ('Title 2', 'a'), ('Title 3',
+'08/18/07'), ('Title 4', 'å')])
+OrderedDict([('Title 1', '2'), ('Title 2', 'b'), ('Title 3',
+'08/19/07'), ('Title 4', '∫')])
+OrderedDict([('Title 1', '3'), ('Title 2', 'c'), ('Title 3',
+'08/20/07'), ('Title 4', 'ç')])
+
+```
+
+而在写入方式中，需要提供一个字段名列表，使它知道如何在输出中确定列的顺序。字段名并不自动写入文件，所以需要在写其他数据之前显式写出
+
+```python
+# csv_dictwriter.py
+import csv
+import sys
+
+fieldnames = ('Title 1', 'Title 2', 'Title 3', 'Title 4')
+headers = {
+    n: n
+    for n in fieldnames
+}		# 这里显式地写出了字段名
+unicode_chars = 'å∫ç'
+
+with open(sys.argv[1], 'wt') as f:
+
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+
+    for i in range(3):
+        writer.writerow({
+            'Title 1': i + 1,
+            'Title 2': chr(ord('a') + i),
+            'Title 3': '08/{:02d}/07'.format(i + 1),
+            'Title 4': unicode_chars[i],
+        })
+
+print(open(sys.argv[1], 'rt').read())
+
+# ouput
+$ python3 csv_dictwriter.py testout.csv
+
+Title 1,Title 2,Title 3,Title 4
+1,a,08/01/07,å
+2,b,08/02/07,∫
+3,c,08/03/07,ç
+```
 
 
 
