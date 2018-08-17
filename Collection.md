@@ -43,3 +43,21 @@
 [Understanding Q-Q Plots | University of Virginia Library Research Data Services + Sciences](https://data.library.virginia.edu/understanding-q-q-plots/)
 
 理解这个图非常重要，是分析数据分布情况的图，另外还有一种检验方法，可以用于检验数据是否是正太分布[Kolmogorov-Smirnov 检验](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test) 
+
+### 机器学习中数据预处理
+
+[Is it a good practice to always scale/normalize data for machine learning? - Cross Validated](https://stats.stackexchange.com/questions/189652/is-it-a-good-practice-to-always-scale-normalize-data-for-machine-learning) 
+
+### 自助法与最佳统计量
+
+下列是发现 "最佳统计量" 估计技巧最常见的三种方式，之前曾经提到过：
+
+- [最大似然估计](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)
+- [矩估计方法](https://onlinecourses.science.psu.edu/stat414/node/193)
+- [贝叶斯估计](https://en.wikipedia.org/wiki/Bayes_estimator)
+
+虽然这些超出了这个课程覆盖的范围，但是数据学家可以很好地理解这些技巧，他们需要理解如何估计一些除了平均数或方差以外不常见的数值。使用其中一种方法"最佳估计"，具有必要性。
+
+### 博客参考——包括了各个方面的内容
+
+[Chris Albon](https://chrisalbon.com/#articles)
