@@ -51,7 +51,7 @@
 
 * 阈值（**Threshold**）
 
-  阈值的设定，指示了分类问题的概率划分。**依据** 于具体任务对假正例（**False Positives**）和假负例（**False Negative**）忍耐，因为不同的时间对两者要求存在差异
+  阈值的设定，指示了分类问题的概率划分。**依据** 于具体任务对假正例（**False Positives**）和假负例（**False Negative**）忍耐，因为不同的事件对两者要求存在差异
 
 * 损失函数
 
@@ -161,6 +161,7 @@
   \end{cases} \\
   假设：h_\beta(x)=g(\beta^Tx)=\frac{1}{1+e^{-\beta^Tx}}
   $$
+
 
 
 
