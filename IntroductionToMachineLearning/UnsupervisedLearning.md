@@ -34,17 +34,45 @@
 因此在该算法中一方面重要的因素选择合适的 `k` 值，另一方面是采用合适的初始化策略。接下来将针对初始化策略进行分析：
 
 * 直接的方式	随机的从所有数据点中选择中心点。这种方式的并不是最佳的，因为它可能出现中心点被初始化到相同的 `cluster` 中。当然如果恰巧的选择了正确 `k` 值，而且 `k` 个群组都有相同的数据点，那么这种概率是 $\frac{k!}{k^k}$。通过使用斯特灵公式（**Stirling’s Approximation**）模拟计算，大约是 $\frac{\sqrt{2\pi k}}{e^k}$ ，这个时候运行效率还是比较高的
-* 相对来说的比较好的方式是，是使用“最远”启发式方法。先随机初始化第一个中心点，第二个中心点是远离第一个中心点的数据中的点。总体的方法就是，第 $j$ 个中心点都是远离之前初始化中心点的数据点。更新数据方面使用的是 `packed circles` 数据的方式。这样的结果就是让所有的中心点都是互相远离的，并且每个中心点都可能被区分到所有的群组中
+  * 相对来说的比较好的方式是，是使用“最远”启发式方法。先随机初始化第一个中心点，第二个中心点是远离第一个中心点的数据中的点。总体的方法就是，第 $j$ 个中心点都是远离之前初始化中心点的数据点。更新数据方面使用的是 `packed circles` 数据的方式。这样的结果就是让所有的中心点都是互相远离的，并且每个中心点都可能被区分到所有的群组中
 * 当然还有可用的较佳方式，叫 `k-means++` 。它和最远启发法比较相似，除了选择后续的初始化中心点方面。计算每个样本与当前已有类聚中心最短距离（即与最近一个聚类中心的距离）；这个值越大，表示被选取作为聚类中心的概率较大；最后，用轮盘法选出下一个聚类中心——以此选择出不同的中心点。
 
 重要的最用是在能够粗略而快速的得到类别，特备是对高斯混合数据，能够选择合适的数量的中心点和启发式算法进行 [Packed Circle](https://en.wikipedia.org/wiki/Circle_packing) 分类数据。当然还有其他方法可以用于进行优化—— [k-medians](http://en.wikipedia.org/wiki/K-medians_clustering), [k-medoids](http://en.wikipedia.org/wiki/K-medoids), [k-means++](http://en.wikipedia.org/wiki/K-means%2B%2B), 和  [EM algorithm for Gaussian mixtures](http://en.wikipedia.org/wiki/Expectation-maximization_algorithm#Gaussian_mixture) 
 
+### 层次聚类分析——`Hierarchical clustering `
 
+该算法和一般的聚类算法相似，差异是在于该算法目的在于建立聚类的层次。在解决聚类的数量是弹性的问题方面，是非常有用的。例如解决在线超市的商品项分类问题上，需要解决的问题是将商品分类从上到下进行详细分类。
 
+在最后确立的模型中同样可以建立一个层次结构树形。算法的步骤如下：
 
+1. 以 N 个聚类开始，每个聚类都能将所有数据分割
+2. 将相互之间最相近的聚类进行结合，这样的话就会建立一个 N-1  个聚类
+3. 再次计算聚类之间的距离——这里的计算方式有多种方法，例如平均连结聚合算法（**Average-Linage Clustering**）就是以两个聚类之间的所有成员距离的平均值
+4. 继续重复第二和第三步，直到最终一个聚类能够将所有数据点囊括，这样就得到的最终的树形
+5. 选择聚类的数量，并以此来绘制一个纵向树形图（**Dendrogram**）
+
+![image-20180817154234975](../img/hierarchical_clustering.png)
+
+## 降维——`Dimensionality Reduction`
+
+降维的方式，非常像压缩的方式。降维的主要目的还是在保持相关数据结构的情况下，减少数据的复杂度。主要的降维方式有 **主成分分析（Principle Component Analysis）** 以及 **奇异值分解（Singular Value Decomposition）**。
 
 ## 参考
 
 1. [K-means++ - Wikipedia](https://en.wikipedia.org/wiki/K-means%2B%2B) 
+
 2. [K-means聚类算法的三种改进(K-means++,ISODATA,Kernel K-means)介绍与对比](https://www.cnblogs.com/yixuan-xu/p/6272208.html)  
+
 3. [Visualizing K-Means Clustering](https://www.naftaliharris.com/blog/visualizing-k-means-clustering/) 
+
+4. [Handwritten Digit Recognition Using K-Nearest Neighbour Classifier - IEEE Conference Publication](https://ieeexplore.ieee.org/document/6755106/?reload=true) 
+
+   这个是手写数字识别的示例，可以查询相关文档
+
+5. [Clustering (2): Hierarchical Agglomerative Clustering - YouTube](https://www.youtube.com/watch?v=OcoE7JlbXvY) 
+
+   讲解层次聚类分析
+
+6. [3-2 Hierarchical Clustering (阶层式分群法)](http://mirlab.org/jang/books/dcpr/dcHierClustering.asp?title=3-2%20Hierarchical%20Clustering%20(%B6%A5%BCh%A6%A1%A4%C0%B8s%AAk)&language=chinese)
+
+7. 
