@@ -246,6 +246,18 @@ i2: [3, 4]
 
 除了用于存储数据，序列化在用于内部进程通信时也是非常灵活的。比如，使用  `os.fork()` 和 `os.pipe()` ，可以建立一些工作进程，它们从一个管道中读取任务说明并把结果输出到另一个管道。操作这些工作池、发送任务和接受返回的核心代码可以复用，因为任务和返回对象不是一个特殊的类。如果使用管道或者套接字，就不要忘记在序列化每个对象后刷新它们，并通过它们之间的连接将数据推送到另外一端。查看`multiprocessing` 模块构建一个可复用的任务池管理器
 
+## `fillna` 使用 `inplace` 参数不能进行原位修改
+
+某些筛选数据是使用 `fillna` 的 `inplace` 参数，不论是字典还是直接的值，不能进行原位修改，具体例子如下：
+
+![image-20180818215909548](../img/fillna_inplace.png)
+
+这种方式根本原因是对副本赋值了，所以需要利用字典对原数据进行修改$^{[7, 8]}$。
+
+![image-20180818220044669](../img/fillna_inplace_right.png)
+
+
+
 ## 参考
 
 1. [Overview of Pandas Data Types - Practical Business Python](http://pbpython.com/pandas_dtypes.html)
@@ -254,3 +266,6 @@ i2: [3, 4]
 4. [floating point - What is the rationale for all comparisons returning false for IEEE754 NaN values? - Stack Overflow](https://stackoverflow.com/questions/1565164/what-is-the-rationale-for-all-comparisons-returning-false-for-ieee754-nan-values)
 5. [python - Why is matplotlib's notched boxplot folding back on itself? - Stack Overflow](https://stackoverflow.com/questions/38794406/why-is-matplotlibs-notched-boxplot-folding-back-on-itself#)
 6. [Built-in magic commands — IPython 6.4.0 documentation](https://ipython.readthedocs.io/en/stable/interactive/magics.html#magic-matplotlib)
+7. [Understanding SettingwithCopyWarning in pandas](https://www.dataquest.io/blog/settingwithcopywarning/)
+8. [python - Pandas won't fillna() inplace - Stack Overflow](https://stackoverflow.com/questions/21998354/pandas-wont-fillna-inplace)
+
