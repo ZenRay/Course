@@ -4,9 +4,7 @@
 
 ## 简介
 
-非监督式学习（**Unsupervised Learning**）：使用没有标记的数据（**Unlabeled Data**）进行学习的过程。其中需要注意相比于监督式学习，非监督式学习的结果不容易选择合适的指标来评估算法模型的表现，这通常是一个直观且具有领域知识相关（**Domain Specific**）。在非监督式学习中主要有两个任务：1）探索数据的群组类别，需要依据相似度将数据聚合到群组中；2）在保证数据结构和信息有用性的情况下，对数据进行降维来压缩数据
-
-
+非监督式学习（**Unsupervised Learning**）：使用没有标记的数据（**Unlabeled Data**）进行学习的过程。其中需要注意相比于监督式学习，非监督式学习的结果不容易选择合适的指标来评估算法模型的表现，这通常是一个直观且具有领域知识相关（**Domain Specific**）。在非监督式学习中主要有两个任务：1）探索数据的群组类别，需要依据相似度将数据聚合到群组中；2）在保证数据结构和信息有用性的情况下，对数据进行降维来压缩数据。因为具有独特的作用，常被用于进行数据预处理。
 
 使用非监督式学习可以解决的实际例子：
 
@@ -57,6 +55,26 @@
 
 降维的方式，非常像压缩的方式。降维的主要目的还是在保持相关数据结构的情况下，减少数据的复杂度。主要的降维方式有 **主成分分析（Principle Component Analysis）** 以及 **奇异值分解（Singular Value Decomposition）**。
 
+### 主成分分析
+
+主成分分析，需要参考线性代数中的空间（**Spaces**）和基（**Bases**）。通过选择子集来构成新的空间，这个空间的维度比原始维度要小，但是尽最大可能性保留了数据的“复杂度”——这个的度量主要是通过能捕捉到的方差来做比较。
+
+### 奇异值分解
+
+奇异值分解特点，即是将矩阵信息分解为三个主要矩阵——其中矩阵 $\sum$ 即是奇异值，通过另外两个举证 $\rm U$ 和 $\rm V$  来代表原数据。
+
+![image-20180819005307629](../img/SVD_illustration.png)
+
+其中比较明显的作用，如下图当前 50 个奇异值即可包括 85% 的数据信息
+
+![image-20180819005809029](../img/svd_infor.png)
+
+下图是实际演示说明：
+
+![image-20180819005940398](../img/svd_dog.png)
+
+
+
 ## 参考
 
 1. [K-means++ - Wikipedia](https://en.wikipedia.org/wiki/K-means%2B%2B) 
@@ -75,4 +93,10 @@
 
 6. [3-2 Hierarchical Clustering (阶层式分群法)](http://mirlab.org/jang/books/dcpr/dcHierClustering.asp?title=3-2%20Hierarchical%20Clustering%20(%B6%A5%BCh%A6%A1%A4%C0%B8s%AAk)&language=chinese)
 
-7. 
+7. [Diffusion Mapping and PCA on the WikiLeaks Cable Database](http://mou3amalet.com/cargocollective/675_xuesabri-final.pdf)
+
+   PCA 相关论文
+
+8. [Cool Linear Algebra: Singular Value Decomposition - Andrew Gibiansky](http://andrew.gibiansky.com/blog/mathematics/cool-linear-algebra-singular-value-decomposition/)
+
+   奇异值分解的阐释
