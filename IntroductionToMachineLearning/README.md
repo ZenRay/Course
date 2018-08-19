@@ -12,4 +12,6 @@
 1. [ReinforcementLearning](ReinforcementLearning.md) 增强式学习——Reinforcement Learning
 2. [SupervisedLearning](SupervisedLearning.md) 监督式学习——Supervised Learning
 3. [ref_convex_optimization](ref_convex_optimization.md) 凸优化参考文件，凸优化的文件内容为 [Stamford Book Convex Optimization](https://web.stanford.edu/~boyd/cvxbook/bv_cvxbook.pdf)
+4. [UnsupervisedLearning](UnsupervisedLearning.md) 非监督式学习
+5. [NeuralNetworkAndDeepLearning](NeuralNetworkAndDeepLearning.md) 神经网络和深度学习
 
