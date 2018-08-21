@@ -256,6 +256,33 @@ i2: [3, 4]
 
 ![image-20180818220044669](../img/fillna_inplace_right.png)
 
+## pandas 中使用 apply 方法因缺失值检验报错
+
+在 `pandas` 中使用 `apply` 方法来处理 数据的时候，可能以为需要检验缺失值以方便替换数据。但是如果直接使用 `np.isnull()` 方法来检验的话，会出现报错——`ufunc 'isnan' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''`。
+
+出现在这个问题的原因，目前看来是因为 `pandas` 不能使用该方法，但是可以使用 `pd.isnull()` 方法来替换。另外还需要注意缺失值是 `float` 型数据。
+
+```python
+np.isnan(np.array([np.nan, 0], dtype=np.float64))
+# output
+array([ True, False], dtype=bool)
+
+# 下面这种情况就会报错
+np.isnan(np.array([np.nan, 0], dtype=object))
+
+# output
+TypeError: ufunc 'isnan' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''
+
+# 使用替换方法
+pd.isnull(np.array([np.nan, 0], dtype=float)
+# ouput
+array([ True, False], dtype=bool)
+
+pd.isnull(np.array([np.nan, 0], dtype=object))
+# output
+array([ True, False], dtype=bool)
+```
+
 
 
 ## 参考
