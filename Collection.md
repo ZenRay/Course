@@ -3,7 +3,7 @@
 [TOC]
 
 # 说明
-针对已经学习的课程，整理出的相关笔记、课程中的代码以及其他练习代码
+针对已经学习的课程，整理出的相关笔记、课程中的代码以及其他练习代码。此外包括其他收集到的需要后续学习的信息
 
 
 ### Andreas Mueller: Word Cloud Generator in Python——文字云
@@ -61,3 +61,7 @@
 ### 博客参考——包括了各个方面的内容
 
 [Chris Albon](https://chrisalbon.com/#articles)
+
+### 深度学习书籍
+
+[deeplearningbook](http://www.deeplearningbook.org/contents/intro.html)，系统介绍了深度学习的相关信息
