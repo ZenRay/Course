@@ -335,9 +335,250 @@ Client: response matches file contents: True
 
 ## 2. `gzip` ——读写 GNU Zip 文件
 
+作用是读写 gzip 文件，它为 GNU zip 文件提供了一个了类文件的借口，它使用 zlib 来压缩和解压缩数据。
+
+```python
+"FCOMMENT", "FEXTRA", "FHCRC", "FNAME", "FTEXT", "GzipFile", "READ", "WRITE", "_GzipReader", "_PaddedFile", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_compression", "_test", "builtins", "compress", "decompress", "io", "open", "os", "struct", "sys", "time", "write32u", "zlib"
+```
+
+### 2.1 写压缩文件
+
+模块级函数方法 `open()` 穿件类文件的类 GzipFile 的一个实例，它提供了读写数据的常用方法。如果需要将数据写至一个压缩的文件，需要使用 `wb` 模式打开文件。下面的例子中，使用来自 `io` 模块的 `TextIOWrapper` 包装了 `GzipFile`，能够将 Unicode 文本编码成适用压缩的字节。
+
+```python
+# gzip_write.py
+import gzip
+import io
+import os
+
+outfilename = 'example.txt.gz'
+with gzip.open(outfilename, 'wb') as output:
+    with io.TextIOWrapper(output, encoding='utf-8') as enc:
+        enc.write('Contents of the example file go here.\n')
+
+print(outfilename, 'contains', os.stat(outfilename).st_size,
+      'bytes')
+os.system('file -b --mime {}'.format(outfilename))
+
+# output
+application/x-gzip; charset=binary
+example.txt.gz contains 75 bytes
+```
+
+通过传入一个不同压缩级别的参数，可以控制压缩的量——这里的压缩量值的的压缩比。其中有效的压缩级别为 0 到 9，值越小压缩越快，压缩程度越小。需要注意，压缩后数据大小变化不仅取决于压缩级别，而且还取决于输入数据
+
+```python
+import gzip
+import io
+import os
+import hashlib
 
 
+def get_hash(data):
+    return hashlib.md5(data).hexdigest()
 
+
+data = open('lorem.txt', 'r').read() * 1024
+cksum = get_hash(data.encode('utf-8'))
+
+
+print('Level  Size        Checksum')
+print('-----  ----------  ---------------------------------')
+print('data   {:>10}  {}'.format(len(data), cksum))
+
+for i in range(0, 10):
+    filename = 'compress-level-{}.gz'.format(i)
+    with gzip.open(filename, 'wb', compresslevel=i) as output:
+        with io.TextIOWrapper(output, encoding='utf-8') as enc:
+            enc.write(data)
+    size = os.stat(filename).st_size
+    cksum = get_hash(open(filename, 'rb').read())
+    print('{:>5d}  {:>10d}  {}'.format(i, size, cksum))
+    
+# output
+Level  Size        Checksum
+-----  ----------  ---------------------------------
+data       754688  e4c0f9433723971563f08a458715119c
+    0      754793  ced7189c324eb73a8388492a9024d391
+    1        9846  5356d357f23e0d5b6d85e920929f0e43
+    2        8267  8ce46bce238edc095e47e941cebad93d
+    3        8227  91662517459db94a744671a6b4295b67
+    4        4167  ad304e3aec585640de9f14306fb32083
+    5        4167  4381a5d6dff4dd2746387f20411dcfcd
+    6        4167  ef3a05112ea382abb53bc4a5bee3a52a
+    7        4167  4723a253d1dc8ddecd4ff7b7adf0bc0b
+    8        4167  0e1aeba7bdc39f0007039f130d9a28b2
+    9        4167  eccf47c4c4f1cca3274e57a1b9b9ddd2
+```
+
+GzipFile 实例还包括一个 `writelines()` 方法，可以用来写一个字符串序列，其与常规文件一样，输入行要包含一个换行符。
+
+```python
+import gzip
+import io
+import itertools
+import os
+
+with gzip.open('example_lines.txt.gz', 'wb') as output:
+    with io.TextIOWrapper(output, encoding='utf-8') as enc:
+        enc.writelines(
+            itertools.repeat('The same line, over and over.\n',
+                             10)
+        )
+
+os.system('gzcat example_lines.txt.gz')
+
+
+# output
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+```
+
+### 2.2 读压缩数据
+
+从压缩的数据读取回数据，可以使用二进制读模式（`rb`）打开文件，这样可以避免对航尾结束字符完成基于文本的转换。读文件时，还可以用 `seek`进行定位，只读取部分数据。这个例子读取上一节中 `gzip_write.py` 写的文件，在解压缩后使用`TextIOWrapper` 解码文本。
+
+```python
+import gzip
+import io
+
+with gzip.open('example.txt.gz', 'rb') as input_file:
+    with io.TextIOWrapper(input_file, encoding='utf-8') as dec:
+        print(dec.read())
+        
+# output
+Contents of the example file go here.
+
+
+# 下面的例子是使用 seek 来定位文件
+import gzip
+
+with gzip.open('example.txt.gz', 'rb') as input_file:
+    print('Entire file:')
+    all_data = input_file.read()
+    print(all_data)
+
+    expected = all_data[5:15]
+
+    # rewind to beginning
+    input_file.seek(0)
+
+    # move ahead 5 bytes
+    input_file.seek(5)
+    print('Starting at position 5 for 10 bytes:')
+    partial = input_file.read(10)
+    print(partial)
+
+    print()
+    print(expected == partial)
+    
+# output
+Entire file:
+b'Contents of the example file go here.\n'
+Starting at position 5 for 10 bytes:
+b'nts of the'
+
+True
+```
+
+### 2.3 处理流
+
+GzipFile 类可以用来包装其他类型的数据流，使它们也可以压缩。通过一个套接字或者一个现有的文件句柄传输数据时，这会很有用。另外还可以使用 BytesIO 缓冲区被用于压缩数据。使用 GzipFIle 而不是 zlib 的一个好处是 GzipFile 支持文件 API。不过，当重新读取先压缩的数据时，需要像 `read()` 显示传递一个长度数值。如果没有这个长度，会导致一个 CRC 错误，这个可能是 BytesIO 报告 EOF 之前会返回一个空字符串。当处理压缩数据流时，可以在数据前添加一个整数作为前缀，表示要读取的具体数据量，或者使用 zlib 中的增量解压缩 API。
+
+```python
+import gzip
+from io import BytesIO
+import binascii
+
+uncompressed_data = b'The same line, over and over.\n' * 10
+print('UNCOMPRESSED:', len(uncompressed_data))
+print(uncompressed_data)
+
+buf = BytesIO()
+with gzip.GzipFile(mode='wb', fileobj=buf) as f:
+    f.write(uncompressed_data)
+
+compressed_data = buf.getvalue()
+print('COMPRESSED:', len(compressed_data))
+print(binascii.hexlify(compressed_data))
+
+inbuffer = BytesIO(compressed_data)
+with gzip.GzipFile(mode='rb', fileobj=inbuffer) as f:
+    reread_data = f.read(len(uncompressed_data))
+
+print('\nREREAD:', len(reread_data))
+print(reread_data)
+
+
+# output
+UNCOMPRESSED: 300
+b'The same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\n'
+COMPRESSED: 51
+b'1f8b080022caae5a02ff0bc94855284ecc4d55c8c9cc4bd551c82f4b2d5248cc4b0133f4b8424665916401d3e717802c010000'
+
+REREAD: 300
+b'The same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\nThe same line, over and over.\n'
+```
+
+## 3. `bz2`——`bzip2` 压缩
+
+作用是完成 bzip2 压缩，`bz2` 模块是 bzip2 库的接口，用于压缩数据以进行存储或传输。提供了三种API：
+
+- “一次性” 压缩/解压缩功能，用于操作大堆数据
+- 用于处理数据流的迭代压缩/解压缩对象
+- 类似文件的类，支持与未压缩文件一样的读写
+
+```python
+"BZ2Compressor", "BZ2Decompressor", "BZ2File", "RLock", "_MODE_CLOSED", "_MODE_READ", "_MODE_WRITE", "__all__", "__author__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_builtin_open", "_compression", "compress", "decompress", "io", "open", "os", "warnings"
+```
+
+### 3.1 内存中一次性操作
+
+使用 bz2 最简单的方法是将所有压缩或解压缩的数据加载到内存中，然后使用 `compress()` 和 `decompress()` 来完成转换。压缩数据包含非 ASCII 字符，所以在打印之前需要先转换为**十六进制模式**。下面的示例中演示了用法
+
+```python
+import bz2
+import binascii
+
+original_data = b'This is the original text.'
+print('Original     : {} bytes'.format(len(original_data)))
+print(original_data)
+
+print()
+compressed = bz2.compress(original_data)
+print('Compressed   : {} bytes'.format(len(compressed)))
+hex_version = binascii.hexlify(compressed)
+for i in range(len(hex_version) // 40 + 1):
+    print(hex_version[i * 40:(i + 1) * 40])
+
+print()
+decompressed = bz2.decompress(compressed)
+print('Decompressed : {} bytes'.format(len(decompressed)))
+print(decompressed)
+
+# output
+Original     : 26 bytes
+b'This is the original text.'
+
+Compressed   : 62 bytes
+b'425a683931415926535916be35a6000002938040'
+b'01040022e59c402000314c000111e93d434da223'
+b'028cf9e73148cae0a0d6ed7f17724538509016be'
+b'35a6'
+
+Decompressed : 26 bytes
+b'This is the original text.'
+```
+
+对于短文本，压缩版本的长度可能大大超过原版本
 
 
 
