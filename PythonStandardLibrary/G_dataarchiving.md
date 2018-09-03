@@ -578,7 +578,251 @@ Decompressed : 26 bytes
 b'This is the original text.'
 ```
 
-对于短文本，压缩版本的长度可能大大超过原版本
+对于短文本，压缩版本的长度可能大大超过原版本。具体的结果取决于输入数据。
+
+```python
+import bz2
+
+original_data = b'This is the original text.'
+
+fmt = '{:>15}  {:>15}'
+print(fmt.format('len(data)', 'len(compressed)'))
+print(fmt.format('-' * 15, '-' * 15))
+
+for i in range(5):
+    data = original_data * i
+    compressed = bz2.compress(data)
+    print(fmt.format(len(data), len(compressed)), end='')
+    print('*' if len(data) < len(compressed) else '')
+    
+# output
+      len(data)  len(compressed)
+---------------  ---------------
+              0               14*
+             26               62*
+             52               68*
+             78               70
+            104               72
+```
+
+### 3.2 增量压缩和解压缩
+
+在内存中压缩的方法，存在明显缺点导致这种方法在实际中不实用。另种方法是使用 BZ2Decompressor 和 BZ2Compressor 对象来进行增量方式处理数据，从而不必对整个数据集都放在内存中。这里的例子从一个纯文本文件读取小数据块，将它传至 `compress()`。压缩器维护压缩数据的一个内部缓冲区，由于压缩算法取决于校验和以及最小块大小，所以压缩器每次接受更懂输入时可能并没有准本好返回数据。如果它没有准备好一个完整的压缩块，会返回一个空字符串。所有数据都已经输入时，`flush()` 方法将强制压缩器结束最后一个数据块，并返回雨下的压缩数据。
+
+```python
+import bz2
+import binascii
+import io
+
+compressor = bz2.BZ2Compressor()
+
+with open('lorem.txt', 'rb') as input:
+    while True:
+        block = input.read(64)
+        if not block:
+            break
+        compressed = compressor.compress(block)
+        if compressed:
+            print('Compressed: {}'.format(
+                binascii.hexlify(compressed)))
+        else:
+            print('buffering...')
+    remaining = compressor.flush()
+    print('Flushed: {}'.format(binascii.hexlify(remaining)))
+    
+    
+# output
+buffering...
+buffering...
+buffering...
+buffering...
+Flushed: b'425a6839314159265359ba83a48c000014d5800010400504052fa7fe003000ba9112793d4ca789068698a0d1a341901a0d53f4d1119a8d4c9e812d755a67c10798387682c7ca7b5a3bb75da77755eb81c1cb1ca94c4b6faf209c52a90aaa4d16a4a1b9c167a01c8d9ef32589d831e77df7a5753a398b11660e392126fc18a72a1088716cc8dedda5d489da410748531278043d70a8a131c2b8adcd6a221bdb8c7ff76b88c1d5342ee48a70a12175074918'
+```
+
+### 3.3 混合内容流
+
+压缩和未压缩数据混合在一起的情况，使用 BZ2Decompressor 解压缩所有数据之后，unused_data 属性会包含所有未用的数据
+
+```python
+import bz2
+
+lorem = open('lorem.txt', 'rt').read().encode('utf-8')
+compressed = bz2.compress(lorem)
+combined = compressed + lorem
+
+decompressor = bz2.BZ2Decompressor()
+decompressed = decompressor.decompress(combined)
+
+decompressed_matches = decompressed == lorem
+print('Decompressed matches lorem:', decompressed_matches)
+
+unused_matches = decompressor.unused_data == lorem
+print('Unused data matches lorem :', unused_matches)
+
+# output
+Decompressed matches lorem: True
+Unused data matches lorem : True
+```
+
+### 3.4 写压缩文件
+
+可以使用 BZ2File 读写 bzip2 压缩文件，使用常用的方法读写数据。当需要往压缩文件内写入数据时，先将其以 `'wb'` 模式打开。下例子中用来自 `io`  模块的  `TextIOWrapper` 包装了 `BZ2File`使其能够把 Unicode 字符编码为字节码，以适应后续的压缩过程。
+
+```python
+import bz2
+import io
+import os
+
+data = 'Contents of the example file go here.\n'
+
+with bz2.BZ2File('example.bz2', 'wb') as output:
+    with io.TextIOWrapper(output, encoding='utf-8') as enc:
+        enc.write(data)
+
+os.system('file example.bz2')
+
+# output
+example.bz2: bzip2 compressed data, block size = 900k
+```
+
+同样在该模块中，通过传入一个 `compresslevel` 参数可以选择调用不同的压缩级别。该参数可取值范围为 `1` 到 `9` 的闭区间。取值越小，则压缩速度越快，压缩幅度越低。取值越大则速度越慢、幅度越大，最大值可以将文件压缩至一个上限。
+
+```python
+import bz2
+import io
+import os
+
+data = open('lorem.txt', 'r', encoding='utf-8').read() * 1024
+print('Input contains {} bytes'.format(
+    len(data.encode('utf-8'))))
+
+for i in range(1, 10):
+    filename = 'compress-level-{}.bz2'.format(i)
+    with bz2.BZ2File(filename, 'wb', compresslevel=i) as output:
+        with io.TextIOWrapper(output, encoding='utf-8') as enc:
+            enc.write(data)
+    os.system('cksum {}'.format(filename))
+    
+# output
+3018243926 8771 compress-level-1.bz2
+1942389165 4949 compress-level-2.bz2
+2596054176 3708 compress-level-3.bz2
+1491394456 2705 compress-level-4.bz2
+1425874420 2705 compress-level-5.bz2
+2232840816 2574 compress-level-6.bz2
+447681641 2394 compress-level-7.bz2
+3699654768 1137 compress-level-8.bz2
+3103658384 1137 compress-level-9.bz2
+Input contains 754688 bytes
+
+# 此外它还有一个 writelines 方法用于写入字符串的序列
+import bz2
+import io
+import itertools
+import os
+
+data = 'The same line, over and over.\n'
+
+with bz2.BZ2File('lines.bz2', 'wb') as output:
+    with io.TextIOWrapper(output, encoding='utf-8') as enc:
+        enc.writelines(itertools.repeat(data, 10))
+
+os.system('bzcat lines.bz2')
+
+# output
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+The same line, over and over.
+```
+
+### 3.5 读取压缩文件
+
+从已经压缩的文件中读取数据，需要使用 `'rb'` 模式进行打开。它会以字符串形式从 `read()` 方法中返回。
+
+```python
+import bz2
+import io
+
+with bz2.BZ2File('example.bz2', 'rb') as input:
+    with io.TextIOWrapper(input, encoding='utf-8') as dec:
+        print(dec.read())
+        
+# output
+Contents of the example file go here.
+
+# 使用 seek
+import bz2
+import contextlib
+
+with bz2.BZ2File('example.bz2', 'rb') as input:
+    print('Entire file:')
+    all_data = input.read()
+    print(all_data)
+
+    expected = all_data[5:15]
+
+    # rewind to beginning
+    input.seek(0)
+
+    # move ahead 5 bytes
+    input.seek(5)
+    print('Starting at position 5 for 10 bytes:')
+    partial = input.read(10)
+    print(partial)
+
+    print()
+    print(expected == partial)
+    
+# output
+Entire file:
+b'Contents of the example file go here.\n'
+Starting at position 5 for 10 bytes:
+b'nts of the'
+
+True
+```
+
+### 3.6 读写 Unicode 数据
+
+前面的例子直接使用 `BZ2File` 来读写压缩文件，并使用 `io.TextIOWrapper` 来管理 Unicode 文本的编解码，必要时使用 `bz2.open()` 来避免这些额外的步骤，可以通过设置 `io.TextIOWrapper` 来自动处理编码解码。`open()` 方法返回的文件句柄可以用 `seek()` 方法来移动指针，但务必小心，因为这移动的是 *字节* 而不是 *字符*，而且有可能会被移动到一个字符的中间
+
+```python
+import bz2
+import os
+
+data = 'Character with an åccent.'
+
+with bz2.open('example.bz2', 'wt', encoding='utf-8') as output:
+    output.write(data)
+
+with bz2.open('example.bz2', 'rt', encoding='utf-8') as input:
+    print('Full file: {}'.format(input.read()))
+
+# Move to the beginning of the accented character.
+with bz2.open('example.bz2', 'rt', encoding='utf-8') as input:
+    input.seek(18)
+    print('One character: {}'.format(input.read(1)))
+
+# Move to the middle of the accented character.
+with bz2.open('example.bz2', 'rt', encoding='utf-8') as input:
+    input.seek(19)
+    try:
+        print(input.read(1))
+    except UnicodeDecodeError:
+        print('ERROR: failed to decode')
+        
+# output
+Full file: Character with an åccent.
+One character: å
+ERROR: failed to decode
+```
 
 
 
