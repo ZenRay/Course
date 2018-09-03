@@ -1075,7 +1075,94 @@ tarfile_compression.tar.gz     213        ['README.txt']
 tarfile_compression.tar.bz2    199        ['README.txt']
 ```
 
+## 5. `zipfile` —— `zip` 归档
 
+作用是读取和写入 ZIP 存档文件，可用于操作 ZIP 存档文件，`.zip` 是 PC 程序 PKZIP 推广的格式。
+
+```python
+"BZIP2_VERSION", "BadZipFile", "BadZipfile", "DEFAULT_VERSION", "LZMACompressor", "LZMADecompressor", "LZMA_VERSION", "LargeZipFile", "MAX_EXTRACT_VERSION", "PyZipFile", "ZIP64_LIMIT", "ZIP64_VERSION", "ZIP_BZIP2", "ZIP_DEFLATED", "ZIP_FILECOUNT_LIMIT", "ZIP_LZMA", "ZIP_MAX_COMMENT", "ZIP_STORED", "ZipExtFile", "ZipFile", "ZipInfo", "_CD64_CREATE_VERSION", "_CD64_DIRECTORY_RECSIZE", "_CD64_DIRECTORY_SIZE", "_CD64_DISK_NUMBER", "_CD64_DISK_NUMBER_START", "_CD64_EXTRACT_VERSION", "_CD64_NUMBER_ENTRIES_THIS_DISK", "_CD64_NUMBER_ENTRIES_TOTAL", "_CD64_OFFSET_START_CENTDIR", "_CD64_SIGNATURE", "_CD_COMMENT_LENGTH", "_CD_COMPRESSED_SIZE", "_CD_COMPRESS_TYPE", "_CD_CRC", "_CD_CREATE_SYSTEM", "_CD_CREATE_VERSION", "_CD_DATE", "_CD_DISK_NUMBER_START", "_CD_EXTERNAL_FILE_ATTRIBUTES", "_CD_EXTRACT_SYSTEM", "_CD_EXTRACT_VERSION", "_CD_EXTRA_FIELD_LENGTH", "_CD_FILENAME_LENGTH", "_CD_FLAG_BITS", "_CD_INTERNAL_FILE_ATTRIBUTES", "_CD_LOCAL_HEADER_OFFSET", "_CD_SIGNATURE", "_CD_TIME", "_CD_UNCOMPRESSED_SIZE", "_ECD_COMMENT", "_ECD_COMMENT_SIZE", "_ECD_DISK_NUMBER", "_ECD_DISK_START", "_ECD_ENTRIES_THIS_DISK", "_ECD_ENTRIES_TOTAL", "_ECD_LOCATION", "_ECD_OFFSET", "_ECD_SIGNATURE", "_ECD_SIZE", "_EndRecData", "_EndRecData64", "_FH_COMPRESSED_SIZE", "_FH_COMPRESSION_METHOD", "_FH_CRC", "_FH_EXTRACT_SYSTEM", "_FH_EXTRACT_VERSION", "_FH_EXTRA_FIELD_LENGTH", "_FH_FILENAME_LENGTH", "_FH_GENERAL_PURPOSE_FLAG_BITS", "_FH_LAST_MOD_DATE", "_FH_LAST_MOD_TIME", "_FH_SIGNATURE", "_FH_UNCOMPRESSED_SIZE", "_SharedFile", "_Tellable", "_ZipDecrypter", "_ZipWriteFile", "__all__", "__builtins__", "__cached__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_check_compression", "_check_zipfile", "_get_compressor", "_get_decompressor", "binascii", "bz2", "compressor_names", "crc32", "error", "importlib", "io", "is_zipfile", "lzma", "main", "os", "re", "shutil", "sizeCentralDir", "sizeEndCentDir", "sizeEndCentDir64", "sizeEndCentDir64Locator", "sizeFileHeader", "stat", "stringCentralDir", "stringEndArchive", "stringEndArchive64", "stringEndArchive64Locator", "stringFileHeader", "struct", "structCentralDir", "structEndArchive", "structEndArchive64", "structEndArchive64Locator", "structFileHeader", "sys", "threading", "time", "zlib"
+```
+
+* 测试 Zip 文件 使用 `is_zipfile()`
+
+* 读取元数据 使用 `namelist()` 显示文件名 , `infolist()` , `getinfo()` 访问元数据。除了以上输出信息之外，Zip 存档还包含额外的数据。不过你需要仔细阅读[PKZIP 应用注释](https://support.pkware.com/display/PKZIP/APPNOTE) 中的 Zip 格式相关的部分，然后才能把这些附加数据解密为有用的信息
+
+* 提取文件 可以将文件名传递给 `read()` 方法，返回结果为对应文件的内容
+
+  ```python
+  import zipfile
+  
+  with zipfile.ZipFile('example.zip') as zf:
+      for filename in ['README.txt', 'notthere.txt']:
+          try:
+              data = zf.read(filename)
+          except KeyError:
+              print('ERROR: Did not find {} in zip file'.format(
+                  filename))
+          else:
+              print(filename, ':')
+              print(data)
+          print()
+  ```
+
+* 创建新归档 要创建新的 Zip 存档，需要以 `'w'` 模式实例化一个 `ZipFile` 对象，存档中任何现有的文件都会被清空，相当于新建一个存档开始写入。如果你想要向现有存档中添加文件，你可以使用 `write()` 方法。要实现压缩功能，需要使用 `zlib`  模块。如果 `zlib`  模块可用，你可以使用 `zipfile.ZIP_DEFLATED` 选项，让 `zipfile`进入对单独的文件或整个存档进行压缩的模式。默认的压缩设置是  `zipfile.ZIP_STORED`，这种模式下 `zipfile` 只会将文件添加进存档而不压缩它
+
+  ```python
+  from zipfile_infolist import print_info
+  import zipfile
+  try:
+      import zlib
+      compression = zipfile.ZIP_DEFLATED
+  except (ImportError, AttributeError):
+      compression = zipfile.ZIP_STORED
+  
+  modes = {
+      zipfile.ZIP_DEFLATED: 'deflated',
+      zipfile.ZIP_STORED: 'stored',
+  }
+  
+  print('creating archive')
+  with zipfile.ZipFile('write_compression.zip', mode='w') as zf:
+      mode_name = modes[compression]
+      print('adding README.txt with compression mode', mode_name)
+      zf.write('README.txt', compress_type=compression)
+  
+  print()
+  print_info('write_compression.zip')
+  ```
+
+* 使用候选归档成员名 给 `write()` 方法传递一个 `arcname` 值，可以将文件以新的文件名加入存档。等价于将文件改名后再加入存档
+
+  ```python
+  from zipfile_infolist import print_info
+  import zipfile
+  
+  with zipfile.ZipFile('write_arcname.zip', mode='w') as zf:
+      zf.write('README.txt', arcname='NOT_README.txt')
+  
+  print_info('write_arcname.zip')
+  ```
+
+* 非文件源写入数据 有时候可能需要将某个字符串写入 Zip 存档，而不是将现有的文件加入存档。而不需要先把字符串写入文件，然后再将文件写入存档，通过 `writestr()` 方法，可以直接将字节流的字符串写入 Zip 存档。传递给 `ZipFile` 的 `compress_type` 参数指定了需要压缩数据，因为 `writestr()` 方法不支持指定是否压缩的参数。
+
+  ```python
+  from zipfile_infolist import print_info
+  import zipfile
+  
+  msg = 'This data did not exist in a file.'
+  with zipfile.ZipFile('writestr.zip',
+                       mode='w',
+                       compression=zipfile.ZIP_DEFLATED,
+                       ) as zf:
+      zf.writestr('from_string.txt', msg)
+  
+  print_info('writestr.zip')
+  
+  with zipfile.ZipFile('writestr.zip', 'r') as zf:
+      print(zf.read('from_string.txt'))
+  ```
+
+注意⚠️： `zipfile`  具有局限性，该模块不支持带附加注释的 ZIP 文件，也不支持分卷压缩文件。通过 ZIP64 扩展它可以支持大于 4GB 的 ZIP 文件
 
 
 
