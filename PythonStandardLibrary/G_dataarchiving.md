@@ -824,9 +824,265 @@ One character: å
 ERROR: failed to decode
 ```
 
+## 4. `tarfile` ——`tar` 归档文件
+
+作用时读写 tar 归档文件，tarfile 提供了对 UNIX tar 归档文件（包括压缩文件）的读写访问。除 POSIX 标准外，还支持多个 GNU tar 扩展。另外还能处理一些 UNIX 特殊文件类型以及设备节点
+
+```python
+"FHeaderError", "EmptyHeaderError", "ExFileObject", "ExtractError", "FIFOTYPE", "GNUTYPE_LONGLINK", "GNUTYPE_LONGNAME", "GNUTYPE_SPARSE", "GNU_FORMAT", "GNU_MAGIC", "GNU_TYPES", "HeaderError", "InvalidHeaderError", "LENGTH_LINK", "LENGTH_NAME", "LENGTH_PREFIX", "LNKTYPE", "NUL", "PAX_FIELDS", "PAX_FORMAT", "PAX_NAME_FIELDS", "PAX_NUMBER_FIELDS", "POSIX_MAGIC", "RECORDSIZE", "REGTYPE", "REGULAR_TYPES", "ReadError", "SOLARIS_XHDTYPE", "SUPPORTED_TYPES", "SYMTYPE", "StreamError", "SubsequentHeaderError", "TarError", "TarFile", "TarInfo", "TruncatedHeaderError", "USTAR_FORMAT", "XGLTYPE", "XHDTYPE", "_FileInFile", "_LowLevelFile", "_Stream", "_StreamProxy", "__all__", "__author__", "__builtins__", "__cached__", "__credits__", "__cvsid__", "__date__", "__doc__", "__file__", "__loader__", "__name__", "__package__", "__spec__", "_safe_print", "bltn_open", "calc_chksums", "copy", "copyfileobj", "filemode", "grp", "io", "is_tarfile", "itn", "main", "nti", "nts", "open", "os", "pwd", "re", "shutil", "stat", "stn", "struct", "symlink_exception", "sys", "time", "version"
+```
+
+### 4.1 测试 tar 文件
+
+`is_tarfile()` 函数返回一个布尔值，指示作为参数传递的文件名是否指向有效的 tar 存档。如果文件不存在，`is_tarfile()` 会引发一个 `IOError`
+
+```python
+import tarfile
+
+for filename in ['README.txt', 'example.tar',
+                 'bad_example.tar', 'notthere.tar']:
+    try:
+        print('{:>15}  {}'.format(filename, tarfile.is_tarfile(
+            filename)))
+    except IOError as err:
+        print('{:>15}  {}'.format(filename, err))
+        
+# output
+     README.txt  False
+    example.tar  True
+bad_example.tar  False
+   notthere.tar  [Errno 2] No such file or directory:
+'notthere.tar'
+```
+
+### 4.2 从归档文件中读取元数据
+
+直接使用 `TarFile` 类来操作一个tar压缩文件。这个类不仅可用来读取数据，而且可用来添加文件到压缩文件中。使用`getnames()`来读取压缩文件中所有文件的文件名。该函数的返回一个字符串列表，包含了所有所含文件的文件名。通过 `getmembers()` 和 `getmember()`函数来获取元数据，如果文件名所对应的文件不存在压缩文件中，函数 `getmember()` 会抛出一个 `KeyError`异常。
+
+```python
+import tarfile
+
+with tarfile.open('example.tar', 'r') as t:
+    print(t.getnames())
+    
+
+# 除了文件名，其他元数据信息可以通过使用TarInfo类的实例来获取
+import tarfile
+import time
+
+with tarfile.open('example.tar', 'r') as t:
+    for member_info in t.getmembers():
+        print(member_info.name)
+        print('  Modified:', time.ctime(member_info.mtime))
+        print('  Mode    :', oct(member_info.mode))
+        print('  Type    :', member_info.type)
+        print('  Size    :', member_info.size, 'bytes')
+        print()
+        
+
+# 如果一个所含文件的文件名已知，可使用getmember()函数获取其所对应的 TarInfo对象
+with tarfile.open('example.tar', 'r') as t:
+    for filename in ['README.txt', 'notthere.txt']:
+        try:
+            info = t.getmember(filename)
+        except KeyError:
+            print('ERROR: Did not find {} in tar archive'.format(
+                filename))
+        else:
+            print('{} is {:d} bytes'.format(
+                info.name, info.size)
+                  
+```
+
+### 4.3 从归档中抽取数据
+
+如果需要在程序中的某个归档成员中访问数据，可使用 `extractfile()` 方法，并把归档成员名作为参数传入。返回值是一个类似文件的对象，从该对象中可以读取归档成员的内容。返回值是一个类似文件的对象，从该对象中可以读取归档成员的内容。归档中的成员被从归档中读取并写入文件系统，这一过程开始于由参数中命名的那个路径之内。标准库文档中有一个注释提到 `extractall()` 方法的安全性强于 `extract()` ，尤其是在处理不能回滚读取较早时间输入部分的流式数据的情况下，所以前者应当更广泛地应用。
+
+```python
+import tarfile
+
+with tarfile.open('example.tar', 'r') as t:
+    for filename in ['README.txt', 'notthere.txt']:
+        try:
+            f = t.extractfile(filename)
+        except KeyError:
+            print('ERROR: Did not find {} in tar archive'.format(
+                filename))
+        else:
+            print(filename, ':')
+            print(f.read().decode('utf-8'))
+            
+# 若想对归档行解包操作，并将文件写入文件系统内，可以使用 extract() 或 extractall() 取代之前的方法
+
+import tarfile
+import os
+
+os.mkdir('outdir')
+with tarfile.open('example.tar', 'r') as t:
+    t.extract('README.txt', 'outdir')
+print(os.listdir('outdir'))
+
+# 档中的成员被从归档中读取并写入文件系统，这一过程开始于由参数中命名的那个路径之内
+
+os.mkdir('outdir')
+with tarfile.open('example.tar', 'r') as t:
+    t.extractall('outdir')
+print(os.listdir('outdir'))
+
+# 若需从归档中提取特定的文件，可将需提取的文件名或者 TarInfo 元数据容器作为参数传递给 extractall()
+os.mkdir('outdir')
+with tarfile.open('example.tar', 'r') as t:
+    t.extractall('outdir',
+                 members=[t.getmember('README.txt')],
+                 )
+print(os.listdir('outdir')
+```
+
+### 4.4 创建新归档
+
+使用带 `w` 模式的`TarFile` 来创建一个新的归档文件。已有的文件会被清除，同时创立一个新的归档文件。使用 `add()` 函数来添加新成员到新建的归档文件中。
+
+```python
+import tarfile
+
+print('creating archive')
+with tarfile.open('tarfile_add.tar', mode='w') as out:
+    print('adding README.txt')
+    out.add('README.txt')
+
+print()
+print('Contents:')
+with tarfile.open('tarfile_add.tar', mode='r') as t:
+    for member_info in t.getmembers():
+        print(member_info.name)
+        
+```
+
+### 4.5 使用候选归档成员名
+
+当添加新文件到归档文件时，可以使用不同的文件名。这个可通过构造一个带有`arcname`的`TarInfo`对象，并将其传入`addfile()`函数来实现。该归档只含有一个重命名的文件：
+
+```python
+import tarfile
+
+print('creating archive')
+with tarfile.open('tarfile_addfile.tar', mode='w') as out:
+    print('adding README.txt as RENAMED.txt')
+    info = out.gettarinfo('README.txt', arcname='RENAMED.txt')
+    out.addfile(info)
+
+print()
+print('Contents:')
+with tarfile.open('tarfile_addfile.tar', mode='r') as t:
+    for member_info in t.getmembers():
+        print(member_info.name)
+        
+# output
+creating archive
+adding README.txt as RENAMED.txt
+
+Contents:
+RENAMED.txt
+```
+
+### 4.6 非文件缘数据归档
+
+有时候需要直接从内存中将数据写进压缩包，而不是先将数据写入文件，再将文件添加进压缩包。你可以使用 `addfile()` 来从类似于打开文件的句柄添加数据来返回字节。通过首先构造 `TarInfo` 对象， 可以为压缩包成员指定你想要的任意名称。在设置了其大小之后，使用 `addfile()` 和 `BytesIO` 缓冲区作为数据源将数据写进压缩包中。
+
+```python
+import io
+import tarfile
+
+text = 'This is the data to write to the archive.'
+data = text.encode('utf-8')
+
+with tarfile.open('addfile_string.tar', mode='w') as out:
+    info = tarfile.TarInfo('made_up_file.txt')
+    info.size = len(data)
+    out.addfile(info, io.BytesIO(data))
+
+print('Contents:')
+with tarfile.open('addfile_string.tar', mode='r') as t:
+    for member_info in t.getmembers():
+        print(member_info.name)
+        f = t.extractfile(member_info)
+        print(f.read().decode('utf-8'))
+        
+# output
+Contents:
+made_up_file.txt
+This is the data to write to the archive.
+```
+
+### 4.7 追加归档
+
+除了创建新的归档文件，还可以通过设置模式参数为`'a'`来添加新文件到已有的归档文件。
+
+```python
+import tarfile
+
+print('creating archive')
+with tarfile.open('tarfile_append.tar', mode='w') as out:
+    out.add('README.txt')
+
+print('contents:',)
+with tarfile.open('tarfile_append.tar', mode='r') as t:
+    print([m.name for m in t.getmembers()])
+
+print('adding index.rst')
+with tarfile.open('tarfile_append.tar', mode='a') as out:
+    out.add('index.rst')
+
+print('contents:',)
+with tarfile.open('tarfile_append.tar', mode='r') as t:
+    print([m.name for m in t.getmembers()])
+```
+
+### 4.8 处理压缩归档
+
+除了正常的Tar 归档文件，`tarfile`模块还可处理通过gzip或bzip2协议压缩的归档文件。要打开一个压缩的归档文件，根据不同的压缩协议，传入 `":gz"` 或 `":bz2"`模式参数到 `open()` 函数。如果使用`"r:*"` 模式读取一个归档文件时，`tarfile`会自动识别压缩方法
+
+```python
+import tarfile
+import os
+
+fmt = '{:<30} {:<10}'
+print(fmt.format('FILENAME', 'SIZE'))
+print(fmt.format('README.txt', os.stat('README.txt').st_size))
+
+FILES = [
+    ('tarfile_compression.tar', 'w'),
+    ('tarfile_compression.tar.gz', 'w:gz'),
+    ('tarfile_compression.tar.bz2', 'w:bz2'),
+]
+
+for filename, write_mode in FILES:
+    with tarfile.open(filename, mode=write_mode) as out:
+        out.add('README.txt')
+
+    print(fmt.format(filename, os.stat(filename).st_size),
+          end=' ')
+    print([
+        m.name
+        for m in tarfile.open(filename, 'r:*').getmembers()
+    ])
+    
+# output
+FILENAME                       SIZE
+README.txt                     75
+tarfile_compression.tar        10240      ['README.txt']
+tarfile_compression.tar.gz     213        ['README.txt']
+tarfile_compression.tar.bz2    199        ['README.txt']
+```
+
+
+
+
+
 
 
 ## 参考
 
 - <http://www.zlib.net/> – Home page for zlib library.
 - <http://www.zlib.net/manual.html> – Complete zlib documentation
+- [GNU tar 手册](http://www.gnu.org/software/tar/manual/html_node/Standard.html) -- Tar格式的文档及其扩展
